@@ -331,20 +331,37 @@ function guardar() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Guardando...';
 
-  const url = APPS_SCRIPT_URL + '?rowIndex=' + registro.rowIndex + '&status=' + statusSel;
+  // JSONP para evitar CORS
+  const callbackName = 'cb_' + Date.now();
+  const url = APPS_SCRIPT_URL + '?rowIndex=' + registro.rowIndex + '&status=' + statusSel + '&callback=' + callbackName;
 
-  // Usar imagen invisible para llamar al Apps Script sin CORS
-  const img = new Image();
-  img.onload = img.onerror = function() {
+  window[callbackName] = function(res) {
+    delete window[callbackName];
+    document.body.removeChild(script);
     btn.innerHTML = 'Guardar Status';
-    showToast('\u2713 Guardado como ' + statusSel);
-    registro.status = statusSel;
-    const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
-    if(idx >= 0) DATOS[idx].status = statusSel;
-    renderRegistro(registro);
-    actualizarResumen();
+    if(res.ok) {
+      showToast('\u2713 Guardado como ' + statusSel);
+      registro.status = statusSel;
+      const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
+      if(idx >= 0) DATOS[idx].status = statusSel;
+      renderRegistro(registro);
+      actualizarResumen();
+    } else {
+      btn.disabled = false;
+      showToast('Error: ' + (res.error || 'desconocido'), true);
+    }
   };
-  img.src = url;
+
+  const script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    delete window[callbackName];
+    document.body.removeChild(script);
+    btn.innerHTML = 'Guardar Status';
+    btn.disabled = false;
+    showToast('Error de conexión', true);
+  };
+  document.body.appendChild(script);
 }
 
 function actualizarResumen() {
