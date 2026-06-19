@@ -325,28 +325,26 @@ function selStatus(val) {
   document.getElementById('btn-guardar').disabled = false;
 }
 
-async function guardar() {
+function guardar() {
   if(!registro || !statusSel) return;
   const btn = document.getElementById('btn-guardar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Guardando...';
 
-  try {
-    const url = APPS_SCRIPT_URL + '?rowIndex=' + registro.rowIndex + '&status=' + statusSel;
-    await fetch(url, {mode: 'no-cors'});
+  const url = APPS_SCRIPT_URL + '?rowIndex=' + registro.rowIndex + '&status=' + statusSel;
+
+  // Usar imagen invisible para llamar al Apps Script sin CORS
+  const img = new Image();
+  img.onload = img.onerror = function() {
     btn.innerHTML = 'Guardar Status';
-    showToast('✓ Guardado como ' + statusSel);
+    showToast('\u2713 Guardado como ' + statusSel);
     registro.status = statusSel;
-    // actualizar datos locales
     const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
     if(idx >= 0) DATOS[idx].status = statusSel;
     renderRegistro(registro);
     actualizarResumen();
-  } catch(e) {
-    btn.innerHTML = 'Guardar Status';
-    btn.disabled = false;
-    showToast('Error al guardar: ' + e.message, true);
-  }
+  };
+  img.src = url;
 }
 
 function actualizarResumen() {
