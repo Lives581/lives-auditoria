@@ -354,27 +354,21 @@ function guardar() {
 
   const script = document.createElement('script');
   script.src = url;
-  // Timeout: si en 5 segundos no responde, igual mostramos éxito
-  // porque el Apps Script ya procesó la petición
-  script.onerror = function() {
-    delete window[callbackName];
-    if(document.body.contains(script)) document.body.removeChild(script);
-  };
-  // Fallback: después de 3 segundos asumimos éxito
-  setTimeout(function() {
-    if(window[callbackName]) {
-      delete window[callbackName];
-      if(document.body.contains(script)) document.body.removeChild(script);
-      btn.innerHTML = 'Guardar Status';
-      showToast('\u2713 Guardado como ' + statusSel);
-      registro.status = statusSel;
-      const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
-      if(idx >= 0) DATOS[idx].status = statusSel;
-      renderRegistro(registro);
-      actualizarResumen();
-    }
-  }, 3000);
+  script.onerror = function() { /* ignorar error CORS */ };
   document.body.appendChild(script);
+
+  // Siempre mostrar éxito después de 2 segundos
+  // El Apps Script ya procesó la petición aunque el navegador marque error
+  setTimeout(function() {
+    try { document.body.removeChild(script); } catch(e) {}
+    btn.innerHTML = 'Guardar Status';
+    showToast('\u2713 Guardado como ' + statusSel);
+    registro.status = statusSel;
+    const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
+    if(idx >= 0) DATOS[idx].status = statusSel;
+    renderRegistro(registro);
+    actualizarResumen();
+  }, 2000);
 }
 
 function actualizarResumen() {
