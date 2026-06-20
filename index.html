@@ -254,12 +254,20 @@ function renderList(list, items, onSel) {
     const d = document.createElement('div');
     d.className = 'ac-item'; d.textContent = item;
     d.addEventListener('mousedown', e => { e.preventDefault(); onSel(item); });
-    // En móvil: solo seleccionar si no hubo deslizamiento
-    let touchStartY = 0;
-    d.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, {passive:true});
+    // Móvil: detectar si fue tap o scroll
+    let tStartY = 0, tStartX = 0, didScroll = false;
+    d.addEventListener('touchstart', e => {
+      tStartY = e.touches[0].clientY;
+      tStartX = e.touches[0].clientX;
+      didScroll = false;
+    }, {passive:true});
+    d.addEventListener('touchmove', e => {
+      const dy = Math.abs(e.touches[0].clientY - tStartY);
+      const dx = Math.abs(e.touches[0].clientX - tStartX);
+      if(dy > 5 || dx > 5) didScroll = true;
+    }, {passive:true});
     d.addEventListener('touchend', e => {
-      const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
-      if(diff < 10) { e.preventDefault(); onSel(item); }
+      if(!didScroll) { e.preventDefault(); onSel(item); }
     });
     list.appendChild(d);
   });
