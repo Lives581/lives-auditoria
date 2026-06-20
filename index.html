@@ -362,12 +362,12 @@ function guardar() {
   setTimeout(function() {
     try { document.body.removeChild(script); } catch(e) {}
     btn.innerHTML = 'Guardar Status';
-    showToast('\u2713 Guardado como ' + statusSel);
-    registro.status = statusSel;
     const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
     if(idx >= 0) DATOS[idx].status = statusSel;
-    renderRegistro(registro);
     actualizarResumen();
+    showToast('\u2713 Guardado como ' + statusSel);
+    // Limpiar todos los campos y volver al inicio
+    limpiarFormulario();
   }, 2000);
 }
 
@@ -381,6 +381,30 @@ function actualizarResumen() {
   document.getElementById('cnt-rech').textContent=rech;
   document.getElementById('cnt-pend').textContent=pend;
   document.getElementById('cnt-sin').textContent=sin;
+}
+
+function limpiarFormulario() {
+  // Limpiar campos de búsqueda
+  ['grupo','estilo','po','color'].forEach(c => {
+    const inp = document.getElementById('inp-'+c);
+    inp.value = '';
+    if(c !== 'grupo') inp.disabled = true;
+    document.getElementById('list-'+c).classList.remove('open');
+  });
+  // Resetear placeholders
+  document.getElementById('inp-estilo').placeholder = 'Primero selecciona Grupo';
+  document.getElementById('inp-po').placeholder = 'Primero selecciona Estilo';
+  document.getElementById('inp-color').placeholder = 'Primero selecciona PO';
+  // Ocultar registro
+  document.getElementById('registro-card').classList.remove('visible');
+  // Resetear estado
+  st = {grupo:null, estilo:null, po:null, color:null};
+  registro = null;
+  statusSel = null;
+  document.getElementById('btn-guardar').disabled = true;
+  document.querySelectorAll('.btn-s').forEach(b => b.classList.remove('on'));
+  // Scroll al inicio
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function showToast(msg, error=false) {
