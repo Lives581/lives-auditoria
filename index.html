@@ -233,10 +233,10 @@ async function cargarDatos() {
         po:         val(COL.PO),
         color:      val(COL.COLOR),
         cantidad:   val(COL.CANT),
-        porcentaje: val(COL.PORC),
+        porcentaje: (c[COL.PORC] && c[COL.PORC].v !== null) ? (parseFloat(c[COL.PORC].v) * 100).toFixed(2) + '%' : '',
         status:     val(COL.STATUS),
-        cantAud:    val(COL.CANT_AUD),
-        porcAud:    val(COL.PORC_AUD),
+        cantAud:    (c[COL.CANT_AUD] && c[COL.CANT_AUD].v !== null && !String(c[COL.CANT_AUD].v).includes('Date')) ? String(c[COL.CANT_AUD].v).trim() : '',
+        porcAud:    (c[COL.PORC_AUD] && c[COL.PORC_AUD].v !== null) ? (parseFloat(c[COL.PORC_AUD].v) * 100).toFixed(2) + '%' : '',
       };
     }).filter(r => r.grupo || r.estilo);
 
@@ -326,7 +326,7 @@ function cargarRegistro() {
   // Prellenar cantidad auditada si ya tiene
   const cantInp = document.getElementById('inp-cant-auditada');
   cantInp.value = registro.cantAud || '';
-  cantInp.max = registro.cantidad || 999999;
+  cantInp.max = parseFloat(registro.cantidad) || 999999;
   document.getElementById('cant-hint').textContent = `Máximo: ${registro.cantidad} prendas`;
   actualizarVersus();
   setTimeout(() => document.getElementById('registro-card').scrollIntoView({behavior:'smooth',block:'start'}), 150);
@@ -343,7 +343,8 @@ function actualizarVersus() {
   const cantInp  = document.getElementById('inp-cant-auditada');
   const cantAud  = parseFloat(cantInp.value) || 0;
   const cantTot  = parseFloat(registro.cantidad) || 0;
-  const porcPed  = parseFloat(registro.porcentaje) || 0;
+  // porcentaje ya viene formateado como "104.44%", extraer número
+  const porcPed  = parseFloat((registro.porcentaje||'0').replace('%','')) || 0;
   const errorEl  = document.getElementById('cant-error');
   const versusBox = document.getElementById('versus-box');
 
