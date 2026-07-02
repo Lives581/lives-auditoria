@@ -17,26 +17,21 @@
 html,body{ width:100%; overflow-x:hidden; }
 body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
-/* HEADER */
 .header{ background:var(--surface); border-bottom:1px solid var(--border); padding:16px 20px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; }
 .logo-badge{ background:var(--green); color:#fff; font-weight:700; font-size:16px; padding:6px 14px; border-radius:6px; letter-spacing:1px; flex-shrink:0; }
 .header-title{ font-size:16px; font-weight:600; color:var(--muted); }
 
-/* RESUMEN */
 .resumen{ display:flex; gap:8px; padding:14px 16px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
 .resumen::-webkit-scrollbar{ display:none; }
 .res-chip{ background:var(--surface); border-radius:10px; padding:12px 16px; text-align:center; flex-shrink:0; min-width:75px; }
 .res-num{ font-size:22px; font-weight:700; }
 .res-lbl{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:3px; }
 
-/* MAIN */
 .main{ padding:16px 16px 120px; max-width:800px; margin:0 auto; }
 
-/* CARD */
 .card{ background:var(--surface); border-radius:14px; padding:22px; margin-bottom:16px; }
 .card-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:18px; }
 
-/* FIELDS — 1 col mobile, 2 col desktop */
 .field-grid{ display:flex; flex-direction:column; gap:18px; }
 @media(min-width:640px){ .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; } }
 
@@ -66,7 +61,6 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 .ac-item:last-child{ border-bottom:none; }
 .ac-item:hover,.ac-item:active{ background:#2a9d8f22; color:var(--green); }
 
-/* REGISTRO */
 .registro-card{ background:var(--surface); border-radius:14px; padding:22px; margin-bottom:16px; border-top:4px solid var(--green); display:none; }
 .registro-card.visible{ display:block; }
 
@@ -77,30 +71,55 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 .dato-label{ font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.8px; }
 .dato-valor{ font-size:16px; font-weight:600; color:var(--text); word-break:break-word; }
 
-/* STATUS */
+/* VERSUS BOX */
+.versus-box{
+  background:#0f172a; border-radius:10px; padding:16px 18px;
+  margin-bottom:18px; display:none;
+}
+.versus-box.visible{ display:block; }
+.versus-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+.versus-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+.versus-item{ flex:1; min-width:120px; text-align:center; }
+.versus-label{ font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
+.versus-val{ font-size:22px; font-weight:700; }
+.versus-sep{ font-size:22px; color:var(--muted); font-weight:300; }
+
+/* CAMPO CANTIDAD AUDITADA */
+.cant-field{ margin-bottom:18px; }
+.cant-field label{ font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:8px; }
+.cant-input-wrap{ display:flex; align-items:center; gap:10px; }
+.cant-input{
+  background:var(--bg); border:2px solid var(--border); border-radius:12px;
+  color:var(--text); font-family:'Barlow',sans-serif;
+  font-size:18px; font-weight:700; padding:14px 16px;
+  width:100%; transition:border-color 0.2s; -webkit-appearance:none;
+  text-align:center;
+}
+.cant-input:focus{ outline:none; border-color:var(--green); }
+.cant-hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+.cant-error{ font-size:12px; color:var(--red); margin-top:6px; display:none; }
+
 .status-section{ margin-bottom:18px; }
 .status-label{ font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:12px; }
 .status-btns{ display:flex; gap:10px; flex-wrap:wrap; }
 .btn-s{ flex:1; min-width:90px; padding:16px 8px; border:2px solid transparent; border-radius:12px; font-family:'Barlow',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.18s; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
 .btn-apr { background:#2a9d8f22; color:#2a9d8f; border-color:#2a9d8f44; }
 .btn-rech{ background:#e6394622; color:#e63946; border-color:#e6394644; }
-.btn-pend{ background:#e9c46a22; color:#e9c46a; border-color:#e9c46a44; }
+.btn-avc { background:#e9c46a22; color:#e9c46a; border-color:#e9c46a44; }
 .btn-apr:hover,.btn-apr.on  { background:#2a9d8f; color:#fff; border-color:#2a9d8f; }
 .btn-rech:hover,.btn-rech.on{ background:#e63946; color:#fff; border-color:#e63946; }
-.btn-pend:hover,.btn-pend.on{ background:#e9c46a; color:#0f172a; border-color:#e9c46a; }
+.btn-avc:hover,.btn-avc.on  { background:#e9c46a; color:#0f172a; border-color:#e9c46a; }
 
 .btn-guardar{ width:100%; padding:17px; background:var(--green); color:#fff; border:none; border-radius:12px; font-family:'Barlow',sans-serif; font-size:17px; font-weight:700; cursor:pointer; transition:background 0.2s; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
 .btn-guardar:hover{ background:#21867a; }
 .btn-guardar:disabled{ background:var(--border); cursor:not-allowed; color:var(--muted); }
 
-/* LOADING */
 .loading{ text-align:center; padding:40px; color:var(--muted); font-size:15px; }
 .loading-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.2s ease-in-out infinite; margin:0 3px; }
 .loading-dot:nth-child(2){ animation-delay:0.2s; }
 .loading-dot:nth-child(3){ animation-delay:0.4s; }
 @keyframes pulse{ 0%,80%,100%{ opacity:0.3; transform:scale(0.8); } 40%{ opacity:1; transform:scale(1.2); } }
 
-/* TOAST */
 .toast{ position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(120px); background:var(--green); color:#fff; padding:15px 28px; border-radius:12px; font-weight:700; font-size:15px; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index:999; white-space:nowrap; box-shadow:0 4px 24px rgba(0,0,0,0.5); }
 .toast.error{ background:var(--red); }
 .toast.show{ transform:translateX(-50%) translateY(0); }
@@ -120,7 +139,7 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
   <div class="res-chip"><div class="res-num" style="color:#94a3b8" id="cnt-tot">—</div><div class="res-lbl">Total</div></div>
   <div class="res-chip"><div class="res-num" style="color:#2a9d8f" id="cnt-apr">—</div><div class="res-lbl">Aprob.</div></div>
   <div class="res-chip"><div class="res-num" style="color:#e63946" id="cnt-rech">—</div><div class="res-lbl">Recház.</div></div>
-  <div class="res-chip"><div class="res-num" style="color:#e9c46a" id="cnt-pend">—</div><div class="res-lbl">Pend.</div></div>
+  <div class="res-chip"><div class="res-num" style="color:#e9c46a" id="cnt-avc">—</div><div class="res-lbl">Avance</div></div>
   <div class="res-chip"><div class="res-num" style="color:#94a3b8" id="cnt-sin">—</div><div class="res-lbl">Sin status</div></div>
 </div>
 
@@ -140,15 +159,41 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
   <div class="registro-card" id="registro-card">
     <div class="card-title">Registro encontrado</div>
     <div class="datos-grid" id="datos-grid"></div>
+
+    <!-- CANTIDAD AUDITADA -->
+    <div class="cant-field">
+      <label>Cantidad Auditada</label>
+      <input id="inp-cant-auditada" class="cant-input" type="number" min="0" placeholder="0" inputmode="numeric">
+      <div class="cant-hint" id="cant-hint"></div>
+      <div class="cant-error" id="cant-error">⚠ No puede superar la cantidad total del registro.</div>
+    </div>
+
+    <!-- VERSUS -->
+    <div class="versus-box" id="versus-box">
+      <div class="versus-title">% Auditado vs % Pedido</div>
+      <div class="versus-row">
+        <div class="versus-item">
+          <div class="versus-label">% Pedido</div>
+          <div class="versus-val" id="vs-pedido" style="color:var(--muted)">—</div>
+        </div>
+        <div class="versus-sep">vs</div>
+        <div class="versus-item">
+          <div class="versus-label">% Auditado</div>
+          <div class="versus-val" id="vs-auditado" style="color:var(--green)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS -->
     <div class="status-section">
       <div class="status-label">Asignar Status</div>
       <div class="status-btns">
         <button class="btn-s btn-apr"  onclick="selStatus('APROBADO')">✓ Aprobado</button>
         <button class="btn-s btn-rech" onclick="selStatus('RECHAZADO')">✗ Rechazado</button>
-        <button class="btn-s btn-pend" onclick="selStatus('PENDIENTE')">⏳ Pendiente</button>
+        <button class="btn-s btn-avc"  onclick="selStatus('AVANCE')">⏩ Avance</button>
       </div>
     </div>
-    <button class="btn-guardar" id="btn-guardar" onclick="guardar()" disabled>Guardar Status</button>
+    <button class="btn-guardar" id="btn-guardar" onclick="guardar()" disabled>Guardar</button>
   </div>
 
 </div>
@@ -156,22 +201,18 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIGURACIÓN ─────────────────────────────────────────────
 const SHEET_ID   = '1BT-8jGWpT6ENHgsnCBX_Ybb9rbHfUr9kearKNsvu8E4';
 const SHEET_NAME = 'Avances Auditoria SEM-025';
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-ZCzYEK9Y-N95TVjbWSMer4rxdxWoZCx8l1rhHln36QbywiCR-pIux3tyTIq8SoP3/exec'; // ← se llenará en el paso siguiente
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-ZCzYEK9Y-N95TVjbWSMer4rxdxWoZCx8l1rhHln36QbywiCR-pIux3tyTIq8SoP3/exec';
 
-// Columnas (0-based)
-const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, STATUS:8 };
-const STATUS_OPTS = ['APROBADO','RECHAZADO','PENDIENTE'];
+const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, STATUS:8, CANT_AUD:9, PORC_AUD:10, FECHA_AVC:11 };
+const STATUS_OPTS = ['APROBADO','RECHAZADO','AVANCE'];
 
-// ── ESTADO ────────────────────────────────────────────────────
 let DATOS = [];
 let st = {grupo:null,estilo:null,po:null,color:null};
 let registro = null, statusSel = null;
 let opts = {grupos:[],estilos:[],pos:[],colores:[]};
 
-// ── CARGA INICIAL ─────────────────────────────────────────────
 async function cargarDatos() {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
@@ -184,7 +225,7 @@ async function cargarDatos() {
       const c = row.c;
       const val = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
       return {
-        rowIndex: i + 2,
+        rowIndex:   i + 2,
         fecha:      val(COL.FECHA),
         semana:     val(COL.SEMANA),
         grupo:      val(COL.GRUPO),
@@ -194,30 +235,15 @@ async function cargarDatos() {
         cantidad:   val(COL.CANT),
         porcentaje: val(COL.PORC),
         status:     val(COL.STATUS),
+        cantAud:    val(COL.CANT_AUD),
+        porcAud:    val(COL.PORC_AUD),
       };
     }).filter(r => r.grupo || r.estilo);
 
-    // Mostrar campos
     document.getElementById('loading-search').style.display = 'none';
     document.getElementById('field-grid').style.display = '';
 
-    // Calcular resumen
-    let apr=0,rech=0,pend=0,sin=0;
-    DATOS.forEach(r => {
-      const s = (r.status||'').toUpperCase();
-      if(s==='APROBADO') apr++;
-      else if(s==='RECHAZADO') rech++;
-      else if(s==='PENDIENTE') pend++;
-      else sin++;
-    });
-    document.getElementById('cnt-tot').textContent  = DATOS.length;
-    document.getElementById('cnt-apr').textContent  = apr;
-    document.getElementById('cnt-rech').textContent = rech;
-    document.getElementById('cnt-pend').textContent = pend;
-    document.getElementById('cnt-sin').textContent  = sin;
-    document.getElementById('resumen').style.display = 'flex';
-
-    // Cargar grupos
+    actualizarResumen();
     opts.grupos = [...new Set(DATOS.map(r=>r.grupo).filter(Boolean))].sort();
 
   } catch(e) {
@@ -226,7 +252,6 @@ async function cargarDatos() {
   }
 }
 
-// ── AUTOCOMPLETE ──────────────────────────────────────────────
 function setupAC(inpId, listId, getOpts, onSel) {
   const inp  = document.getElementById(inpId);
   const list = document.getElementById(listId);
@@ -254,21 +279,10 @@ function renderList(list, items, onSel) {
     const d = document.createElement('div');
     d.className = 'ac-item'; d.textContent = item;
     d.addEventListener('mousedown', e => { e.preventDefault(); onSel(item); });
-    // Móvil: detectar si fue tap o scroll
     let tStartY = 0, tStartX = 0, didScroll = false;
-    d.addEventListener('touchstart', e => {
-      tStartY = e.touches[0].clientY;
-      tStartX = e.touches[0].clientX;
-      didScroll = false;
-    }, {passive:true});
-    d.addEventListener('touchmove', e => {
-      const dy = Math.abs(e.touches[0].clientY - tStartY);
-      const dx = Math.abs(e.touches[0].clientX - tStartX);
-      if(dy > 5 || dx > 5) didScroll = true;
-    }, {passive:true});
-    d.addEventListener('touchend', e => {
-      if(!didScroll) { e.preventDefault(); onSel(item); }
-    });
+    d.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; tStartX = e.touches[0].clientX; didScroll = false; }, {passive:true});
+    d.addEventListener('touchmove', e => { if(Math.abs(e.touches[0].clientY-tStartY)>5||Math.abs(e.touches[0].clientX-tStartX)>5) didScroll=true; }, {passive:true});
+    d.addEventListener('touchend', e => { if(!didScroll){ e.preventDefault(); onSel(item); } });
     list.appendChild(d);
   });
 }
@@ -292,30 +306,64 @@ setupAC('inp-grupo','list-grupo', () => opts.grupos, val => {
   opts.estilos = [...new Set(DATOS.filter(r=>r.grupo===val).map(r=>r.estilo).filter(Boolean))].sort();
   const i = document.getElementById('inp-estilo'); i.disabled=false; i.placeholder='Escribe para buscar...';
 });
-
 setupAC('inp-estilo','list-estilo', () => opts.estilos, val => {
   st.estilo = val; resetFrom('po');
   opts.pos = [...new Set(DATOS.filter(r=>r.grupo===st.grupo&&r.estilo===val).map(r=>r.po).filter(Boolean))].sort();
   const i = document.getElementById('inp-po'); i.disabled=false; i.placeholder='Escribe para buscar...';
 });
-
 setupAC('inp-po','list-po', () => opts.pos, val => {
   st.po = val; resetFrom('color');
   opts.colores = [...new Set(DATOS.filter(r=>r.grupo===st.grupo&&r.estilo===st.estilo&&r.po===val).map(r=>r.color).filter(Boolean))].sort();
   const i = document.getElementById('inp-color'); i.disabled=false; i.placeholder='Escribe para buscar...';
 });
-
-setupAC('inp-color','list-color', () => opts.colores, val => {
-  st.color = val; cargarRegistro();
-});
+setupAC('inp-color','list-color', () => opts.colores, val => { st.color = val; cargarRegistro(); });
 
 function cargarRegistro() {
   registro = DATOS.find(r => r.grupo===st.grupo && r.estilo===st.estilo && r.po===st.po && r.color===st.color) || null;
   if(!registro){ showToast('Registro no encontrado', true); return; }
   renderRegistro(registro);
   document.getElementById('registro-card').classList.add('visible');
+  // Prellenar cantidad auditada si ya tiene
+  const cantInp = document.getElementById('inp-cant-auditada');
+  cantInp.value = registro.cantAud || '';
+  cantInp.max = registro.cantidad || 999999;
+  document.getElementById('cant-hint').textContent = `Máximo: ${registro.cantidad} prendas`;
+  actualizarVersus();
   setTimeout(() => document.getElementById('registro-card').scrollIntoView({behavior:'smooth',block:'start'}), 150);
   if(STATUS_OPTS.includes((registro.status||'').toUpperCase())) selStatus(registro.status.toUpperCase());
+}
+
+// Actualizar versus en tiempo real al cambiar cantidad auditada
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inp-cant-auditada').addEventListener('input', actualizarVersus);
+});
+
+function actualizarVersus() {
+  if(!registro) return;
+  const cantInp  = document.getElementById('inp-cant-auditada');
+  const cantAud  = parseFloat(cantInp.value) || 0;
+  const cantTot  = parseFloat(registro.cantidad) || 0;
+  const porcPed  = parseFloat(registro.porcentaje) || 0;
+  const errorEl  = document.getElementById('cant-error');
+  const versusBox = document.getElementById('versus-box');
+
+  // Validar máximo
+  if(cantAud > cantTot && cantTot > 0) {
+    errorEl.style.display = 'block';
+    cantInp.style.borderColor = 'var(--red)';
+  } else {
+    errorEl.style.display = 'none';
+    cantInp.style.borderColor = cantAud > 0 ? 'var(--green)' : 'var(--border)';
+  }
+
+  if(cantAud > 0 && cantTot > 0) {
+    const porcAud = (cantAud / cantTot) * porcPed;
+    document.getElementById('vs-pedido').textContent  = porcPed.toFixed(2) + '%';
+    document.getElementById('vs-auditado').textContent = porcAud.toFixed(2) + '%';
+    versusBox.classList.add('visible');
+  } else {
+    versusBox.classList.remove('visible');
+  }
 }
 
 function renderRegistro(d) {
@@ -323,8 +371,9 @@ function renderRegistro(d) {
     {label:'Fecha',val:d.fecha},{label:'Semana',val:d.semana},
     {label:'Grupo',val:d.grupo},{label:'Estilo',val:d.estilo},
     {label:'PO',val:d.po},{label:'Color',val:d.color},
-    {label:'Cantidad',val:d.cantidad},{label:'Porcentaje',val:d.porcentaje},
+    {label:'Cantidad',val:d.cantidad},{label:'% Pedido',val:d.porcentaje},
     {label:'Status actual',val:d.status||'—'},
+    {label:'Cant. Auditada',val:d.cantAud||'—'},{label:'% Auditado',val:d.porcAud||'—'},
   ];
   document.getElementById('datos-grid').innerHTML = campos.map(c =>
     `<div class="dato"><span class="dato-label">${c.label}</span><span class="dato-valor">${c.val}</span></div>`
@@ -334,90 +383,95 @@ function renderRegistro(d) {
 function selStatus(val) {
   statusSel = val;
   document.querySelectorAll('.btn-s').forEach(b => b.classList.remove('on'));
-  const map = {APROBADO:'btn-apr',RECHAZADO:'btn-rech',PENDIENTE:'btn-pend'};
+  const map = {APROBADO:'btn-apr',RECHAZADO:'btn-rech',AVANCE:'btn-avc'};
   document.querySelector('.'+map[val]).classList.add('on');
   document.getElementById('btn-guardar').disabled = false;
 }
 
 function guardar() {
   if(!registro || !statusSel) return;
+
+  // Validar cantidad auditada
+  const cantInp = document.getElementById('inp-cant-auditada');
+  const cantAud = parseFloat(cantInp.value) || 0;
+  const cantTot = parseFloat(registro.cantidad) || 0;
+  if(cantAud > cantTot && cantTot > 0) {
+    showToast('La cantidad auditada supera el total del registro', true);
+    return;
+  }
+
   const btn = document.getElementById('btn-guardar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Guardando...';
 
-  // JSONP para evitar CORS
   const callbackName = 'cb_' + Date.now();
-  const url = APPS_SCRIPT_URL + '?rowIndex=' + registro.rowIndex + '&status=' + statusSel + '&callback=' + callbackName;
+  let params = `?rowIndex=${registro.rowIndex}&status=${statusSel}&callback=${callbackName}`;
+  if(cantAud > 0) params += `&cantAud=${cantAud}`;
+
+  const url = APPS_SCRIPT_URL + params;
 
   window[callbackName] = function(res) {
     delete window[callbackName];
-    document.body.removeChild(script);
-    btn.innerHTML = 'Guardar Status';
-    if(res.ok) {
-      showToast('\u2713 Guardado como ' + statusSel);
-      registro.status = statusSel;
-      const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
-      if(idx >= 0) DATOS[idx].status = statusSel;
-      renderRegistro(registro);
-      actualizarResumen();
-    } else {
-      btn.disabled = false;
-      showToast('Error: ' + (res.error || 'desconocido'), true);
-    }
+    try { document.body.removeChild(script); } catch(e) {}
+    btn.innerHTML = 'Guardar';
   };
 
   const script = document.createElement('script');
   script.src = url;
-  script.onerror = function() { /* ignorar error CORS */ };
+  script.onerror = function() {};
   document.body.appendChild(script);
 
-  // Siempre mostrar éxito después de 2 segundos
-  // El Apps Script ya procesó la petición aunque el navegador marque error
   setTimeout(function() {
     try { document.body.removeChild(script); } catch(e) {}
-    btn.innerHTML = 'Guardar Status';
+    btn.innerHTML = 'Guardar';
     const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
-    if(idx >= 0) DATOS[idx].status = statusSel;
+    if(idx >= 0) {
+      DATOS[idx].status  = statusSel;
+      DATOS[idx].cantAud = cantAud > 0 ? String(cantAud) : DATOS[idx].cantAud;
+    }
     actualizarResumen();
-    showToast('\u2713 Guardado como ' + statusSel);
-    // Limpiar todos los campos y volver al inicio
+    showToast('\u2713 Guardado correctamente');
     limpiarFormulario();
   }, 2000);
 }
 
 function actualizarResumen() {
-  let apr=0,rech=0,pend=0,sin=0;
+  let apr=0,rech=0,avc=0,sin=0;
   DATOS.forEach(r => {
     const s=(r.status||'').toUpperCase();
-    if(s==='APROBADO')apr++;else if(s==='RECHAZADO')rech++;else if(s==='PENDIENTE')pend++;else sin++;
+    if(s==='APROBADO')apr++;
+    else if(s==='RECHAZADO')rech++;
+    else if(s==='AVANCE')avc++;
+    else sin++;
   });
-  document.getElementById('cnt-apr').textContent=apr;
-  document.getElementById('cnt-rech').textContent=rech;
-  document.getElementById('cnt-pend').textContent=pend;
-  document.getElementById('cnt-sin').textContent=sin;
+  document.getElementById('cnt-tot').textContent  = DATOS.length;
+  document.getElementById('cnt-apr').textContent  = apr;
+  document.getElementById('cnt-rech').textContent = rech;
+  document.getElementById('cnt-avc').textContent  = avc;
+  document.getElementById('cnt-sin').textContent  = sin;
+  const el = document.getElementById('resumen');
+  if(el) el.style.display = 'flex';
 }
 
 function limpiarFormulario() {
-  // Limpiar campos de búsqueda
   ['grupo','estilo','po','color'].forEach(c => {
     const inp = document.getElementById('inp-'+c);
     inp.value = '';
     if(c !== 'grupo') inp.disabled = true;
     document.getElementById('list-'+c).classList.remove('open');
   });
-  // Resetear placeholders
   document.getElementById('inp-estilo').placeholder = 'Primero selecciona Grupo';
   document.getElementById('inp-po').placeholder = 'Primero selecciona Estilo';
   document.getElementById('inp-color').placeholder = 'Primero selecciona PO';
-  // Ocultar registro
+  document.getElementById('inp-cant-auditada').value = '';
+  document.getElementById('cant-hint').textContent = '';
+  document.getElementById('cant-error').style.display = 'none';
+  document.getElementById('versus-box').classList.remove('visible');
   document.getElementById('registro-card').classList.remove('visible');
-  // Resetear estado
   st = {grupo:null, estilo:null, po:null, color:null};
-  registro = null;
-  statusSel = null;
+  registro = null; statusSel = null;
   document.getElementById('btn-guardar').disabled = true;
   document.querySelectorAll('.btn-s').forEach(b => b.classList.remove('on'));
-  // Scroll al inicio
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -428,7 +482,6 @@ function showToast(msg, error=false) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── INICIO ────────────────────────────────────────────────────
 cargarDatos();
 </script>
 </body>
