@@ -84,6 +84,27 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 .versus-val{ font-size:22px; font-weight:700; }
 .versus-sep{ font-size:22px; color:var(--muted); font-weight:300; }
 
+/* TARJETAS DE AUDITORÍA (histórico 1ra/2da/3ra) */
+.audits-box{ margin-bottom:18px; display:none; }
+.audits-box.visible{ display:block; }
+.audits-title{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+.audits-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media(max-width:480px){ .audits-grid{ grid-template-columns:1fr; } }
+.audit-card{ background:#0f172a; border:1.5px solid var(--border); border-radius:10px; padding:12px; opacity:0.35; }
+.audit-card.filled{ opacity:1; }
+.audit-card.filled.st-aprobado{ border-color:#2a9d8f66; }
+.audit-card.filled.st-rechazado{ border-color:#e6394666; }
+.audit-card.filled.st-avance{ border-color:#e9c46a66; }
+.audit-num{ font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; }
+.audit-porc{ font-size:20px; font-weight:700; margin-bottom:4px; }
+.audit-cant{ font-size:11px; color:var(--text); margin-bottom:6px; }
+.audit-status{ font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:4px; }
+.audit-status.st-aprobado{ color:#2a9d8f; }
+.audit-status.st-rechazado{ color:#e63946; }
+.audit-status.st-avance{ color:#e9c46a; }
+.audit-fecha{ font-size:11px; color:var(--muted); }
+.audit-empty{ font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
+
 /* CAMPO CANTIDAD AUDITADA */
 .cant-field{ margin-bottom:18px; }
 .cant-field label{ font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:8px; }
@@ -160,6 +181,12 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
     <div class="card-title">Registro encontrado</div>
     <div class="datos-grid" id="datos-grid"></div>
 
+    <!-- HISTORIAL DE AUDITORÍAS -->
+    <div class="audits-box" id="audits-box">
+      <div class="audits-title">Historial de Auditorías (por % de pedido)</div>
+      <div class="audits-grid" id="audits-grid"></div>
+    </div>
+
     <!-- CANTIDAD AUDITADA -->
     <div class="cant-field">
       <label>Cantidad Auditada</label>
@@ -205,7 +232,10 @@ const SHEET_ID   = '1BT-8jGWpT6ENHgsnCBX_Ybb9rbHfUr9kearKNsvu8E4';
 const SHEET_NAME = 'Avances Auditoria SEM-025';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-ZCzYEK9Y-N95TVjbWSMer4rxdxWoZCx8l1rhHln36QbywiCR-pIux3tyTIq8SoP3/exec';
 
-const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, STATUS:8, CANT_AUD:9, PORC_AUD:10, FECHA_AVC:11 };
+const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, ESTATUS_ENC:8, STATUS:9,
+  P1RA:10, C1RA:11, S1RA:12, F1RA:13,
+  P2DA:14, C2DA:15, S2DA:16, F2DA:17,
+  P3RA:18, C3RA:19, S3RA:20, F3RA:21 };
 const STATUS_OPTS = ['APROBADO','RECHAZADO','AVANCE'];
 
 let DATOS = [];
@@ -234,9 +264,20 @@ async function cargarDatos() {
         color:      val(COL.COLOR),
         cantidad:   val(COL.CANT),
         porcentaje: (c[COL.PORC] && c[COL.PORC].v !== null) ? (parseFloat(c[COL.PORC].v) * 100).toFixed(2) + '%' : '',
+        estatusEnc: val(COL.ESTATUS_ENC),
         status:     val(COL.STATUS),
-        cantAud:    (c[COL.CANT_AUD] && c[COL.CANT_AUD].v !== null && !String(c[COL.CANT_AUD].v).includes('Date')) ? String(c[COL.CANT_AUD].v).trim() : '',
-        porcAud:    (c[COL.PORC_AUD] && c[COL.PORC_AUD].v !== null) ? (parseFloat(c[COL.PORC_AUD].v) * 100).toFixed(2) + '%' : '',
+        aud1_porc:  (c[COL.P1RA] && c[COL.P1RA].v !== null) ? parseFloat(c[COL.P1RA].v) : null,
+        aud1_cant:  val(COL.C1RA),
+        aud1_stat:  val(COL.S1RA),
+        aud1_fecha: val(COL.F1RA),
+        aud2_porc:  (c[COL.P2DA] && c[COL.P2DA].v !== null) ? parseFloat(c[COL.P2DA].v) : null,
+        aud2_cant:  val(COL.C2DA),
+        aud2_stat:  val(COL.S2DA),
+        aud2_fecha: val(COL.F2DA),
+        aud3_porc:  (c[COL.P3RA] && c[COL.P3RA].v !== null) ? parseFloat(c[COL.P3RA].v) : null,
+        aud3_cant:  val(COL.C3RA),
+        aud3_stat:  val(COL.S3RA),
+        aud3_fecha: val(COL.F3RA),
       };
     }).filter(r => r.grupo || r.estilo);
 
@@ -329,8 +370,44 @@ function cargarRegistro() {
   cantInp.max = parseFloat(registro.cantidad) || 999999;
   document.getElementById('cant-hint').textContent = `Máximo: ${registro.cantidad} prendas`;
   actualizarVersus();
+  renderAudits(registro);
   setTimeout(() => document.getElementById('registro-card').scrollIntoView({behavior:'smooth',block:'start'}), 150);
   if(STATUS_OPTS.includes((registro.status||'').toUpperCase())) selStatus(registro.status.toUpperCase());
+}
+
+function renderAudits(d) {
+  const box = document.getElementById('audits-box');
+  const grid = document.getElementById('audits-grid');
+  const cantTot = parseFloat(d.cantidad) || 0;
+  const audits = [
+    {num:'1ra Auditoría', porc:d.aud1_porc, cant:d.aud1_cant, stat:d.aud1_stat, fecha:d.aud1_fecha},
+    {num:'2da Auditoría', porc:d.aud2_porc, cant:d.aud2_cant, stat:d.aud2_stat, fecha:d.aud2_fecha},
+    {num:'3ra Auditoría', porc:d.aud3_porc, cant:d.aud3_cant, stat:d.aud3_stat, fecha:d.aud3_fecha},
+  ];
+  const hayAlguna = audits.some(a => a.porc !== null && a.porc !== undefined);
+  if(!hayAlguna) { box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+
+  grid.innerHTML = audits.map(a => {
+    if(a.porc === null || a.porc === undefined) {
+      return `<div class="audit-card"><div class="audit-num">${a.num}</div><div class="audit-empty">Sin registrar</div></div>`;
+    }
+    const statClass = 'st-' + (a.stat||'').toLowerCase();
+    const porcPedidoTxt = (a.porc*100).toFixed(2) + '%';
+    const cantAud = parseFloat(a.cant) || 0;
+    let auditadoTxt = '—';
+    if(cantAud > 0 && cantTot > 0) {
+      const porcReal = (cantAud / cantTot) * (a.porc*100);
+      auditadoTxt = porcReal.toFixed(2) + '% (' + cantAud + ' prendas)';
+    }
+    return `<div class="audit-card filled ${statClass}">
+      <div class="audit-num">${a.num}</div>
+      <div class="audit-porc">${porcPedidoTxt}</div>
+      <div class="audit-cant">Auditado: ${auditadoTxt}</div>
+      <div class="audit-status ${statClass}">${a.stat||'—'}</div>
+      <div class="audit-fecha">${a.fecha||''}</div>
+    </div>`;
+  }).join('');
 }
 
 // Actualizar versus en tiempo real al cambiar cantidad auditada
@@ -373,6 +450,7 @@ function renderRegistro(d) {
     {label:'Grupo',val:d.grupo},{label:'Estilo',val:d.estilo},
     {label:'PO',val:d.po},{label:'Color',val:d.color},
     {label:'Cantidad',val:d.cantidad},{label:'% Pedido',val:d.porcentaje},
+    {label:'Estatus Encajado',val:d.estatusEnc||'—'},
     {label:'Status actual',val:d.status||'—'},
     {label:'Cant. Auditada',val:d.cantAud||'—'},{label:'% Auditado',val:d.porcAud||'—'},
   ];
@@ -468,6 +546,7 @@ function limpiarFormulario() {
   document.getElementById('cant-hint').textContent = '';
   document.getElementById('cant-error').style.display = 'none';
   document.getElementById('versus-box').classList.remove('visible');
+  document.getElementById('audits-box').classList.remove('visible');
   document.getElementById('registro-card').classList.remove('visible');
   st = {grupo:null, estilo:null, po:null, color:null};
   registro = null; statusSel = null;
