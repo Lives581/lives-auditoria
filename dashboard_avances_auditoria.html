@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Avances Auditoría LIVES</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --petroleo:#0E3B36;
+  --petroleo-light:#155048;
+  --esmeralda:#10B981;
+  --rechazo:#DC2626;
+  --ambar:#F59E0B;
+  --bg:#F1F6F4;
+  --card:#FFFFFF;
+  --border:#DCE7E3;
+  --text:#0E1F1C;
+  --muted:#5A6B67;
+}
+
+body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* HEADER */
+.header{
+  background:var(--petroleo); color:#fff; padding:20px 28px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.15);
+}
+.header-left{ display:flex; align-items:center; gap:14px; }
+.logo-badge{ background:var(--esmeralda); color:#fff; font-weight:800; font-size:16px; padding:7px 14px; border-radius:6px; letter-spacing:1px; }
+.header-title{ font-size:18px; font-weight:700; letter-spacing:0.3px; }
+.header-sub{ font-size:12px; color:#B9D4CD; margin-top:2px; }
+.header-status{ font-size:12px; color:#B9D4CD; display:flex; align-items:center; gap:6px; }
+.dot{ width:8px; height:8px; border-radius:50%; background:var(--esmeralda); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* FILTERS */
+.filters-bar{
+  background:var(--card); border-bottom:1px solid var(--border);
+  padding:16px 28px; position:sticky; top:76px; z-index:90;
+  display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;
+}
+.filter-group{ display:flex; flex-direction:column; gap:5px; min-width:150px; flex:1; }
+.filter-group label{ font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; }
+.filter-group select, .filter-group input{
+  border:1.5px solid var(--border); border-radius:8px; padding:9px 12px;
+  font-family:'Barlow',sans-serif; font-size:13.5px; background:var(--bg); color:var(--text);
+}
+.filter-group select:focus, .filter-group input:focus{ outline:none; border-color:var(--esmeralda); background:#fff; }
+.btn-reset{
+  border:1.5px solid var(--border); background:#fff; color:var(--muted);
+  border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  transition:all 0.15s; white-space:nowrap;
+}
+.btn-reset:hover{ border-color:var(--rechazo); color:var(--rechazo); }
+
+.status-chips{ display:flex; gap:8px; padding:12px 28px 0; flex-wrap:wrap; }
+.chip{
+  border:1.5px solid var(--border); background:#fff; color:var(--muted);
+  border-radius:20px; padding:7px 16px; font-size:12.5px; font-weight:600; cursor:pointer;
+  transition:all 0.15s; display:flex; align-items:center; gap:6px;
+}
+.chip .n{ font-weight:800; }
+.chip.active{ background:var(--petroleo); color:#fff; border-color:var(--petroleo); }
+.chip[data-st="APROBADO"].active{ background:var(--esmeralda); border-color:var(--esmeralda); }
+.chip[data-st="RECHAZADO"].active{ background:var(--rechazo); border-color:var(--rechazo); }
+.chip[data-st="AVANCE"].active{ background:var(--ambar); border-color:var(--ambar); }
+.chip[data-st="SIN"].active{ background:var(--muted); border-color:var(--muted); }
+
+/* MAIN */
+.main{ padding:20px 28px 60px; max-width:1500px; margin:0 auto; }
+
+/* KPIs */
+.kpi-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:20px; }
+@media(max-width:1100px){ .kpi-grid{ grid-template-columns:repeat(3,1fr); } }
+@media(max-width:640px){ .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+.kpi-card{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+.kpi-label{ font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px; }
+.kpi-val{ font-size:26px; font-weight:800; }
+.kpi-card.primary{ border:2px solid var(--petroleo); }
+.kpi-card.primary .kpi-val{ color:var(--petroleo); font-size:30px; }
+.kpi-card.apr .kpi-val{ color:var(--esmeralda); }
+.kpi-card.rech .kpi-val{ color:var(--rechazo); }
+.kpi-card.avc .kpi-val{ color:var(--ambar); }
+.kpi-card.sin .kpi-val{ color:var(--muted); }
+.kpi-card.enc .kpi-val{ color:var(--petroleo-light); }
+
+/* PANELS */
+.panels-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+@media(max-width:900px){ .panels-row{ grid-template-columns:1fr; } }
+.panel{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; }
+.panel-title{ font-size:13px; font-weight:700; color:var(--petroleo); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px; }
+.panel canvas{ max-height:260px; }
+
+/* TABLE */
+.table-panel{ background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.table-header{ padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.table-title{ font-size:13px; font-weight:700; color:var(--petroleo); text-transform:uppercase; letter-spacing:0.5px; }
+.table-count{ font-size:12px; color:var(--muted); }
+.table-wrap{ overflow-x:auto; max-height:600px; overflow-y:auto; }
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+thead th{
+  background:var(--petroleo); color:#fff; padding:10px 14px; text-align:left;
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px;
+  position:sticky; top:0; z-index:10; white-space:nowrap;
+}
+tbody td{ padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; }
+tbody tr:hover{ background:#F6FBF9; }
+.badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-apr{ background:#D1FAE5; color:#065F46; }
+.badge-rech{ background:#FEE2E2; color:#991B1B; }
+.badge-avc{ background:#FEF3C7; color:#92400E; }
+.badge-sin{ background:#E5E7EB; color:#374151; }
+.enc-note{ font-size:11.5px; color:var(--muted); font-style:italic; }
+
+.loading{ text-align:center; padding:60px; color:var(--muted); }
+.empty{ text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo-badge">LIVES</span>
+    <div>
+      <div class="header-title">Avances de Auditoría — Packing</div>
+      <div class="header-sub">Calidad Manufactura</div>
+    </div>
+  </div>
+  <div class="header-status"><span class="dot"></span> Conectado en vivo a Google Sheets</div>
+</div>
+
+<div class="filters-bar">
+  <div class="filter-group">
+    <label>Grupo</label>
+    <select id="f-grupo"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Estilo</label>
+    <select id="f-estilo"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>PO</label>
+    <select id="f-po"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Color</label>
+    <select id="f-color"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group" style="min-width:200px">
+    <label>Búsqueda libre</label>
+    <input id="f-search" type="text" placeholder="Grupo, estilo, PO, color...">
+  </div>
+  <button class="btn-reset" onclick="resetFiltros()">✕ Limpiar filtros</button>
+</div>
+
+<div class="status-chips" id="status-chips">
+  <div class="chip active" data-st="" onclick="setStatusFiltro('')">Todos <span class="n" id="chip-tot">—</span></div>
+  <div class="chip" data-st="APROBADO" onclick="setStatusFiltro('APROBADO')">✓ Aprobado <span class="n" id="chip-apr">—</span></div>
+  <div class="chip" data-st="RECHAZADO" onclick="setStatusFiltro('RECHAZADO')">✗ Rechazado <span class="n" id="chip-rech">—</span></div>
+  <div class="chip" data-st="AVANCE" onclick="setStatusFiltro('AVANCE')">⏩ Avance <span class="n" id="chip-avc">—</span></div>
+  <div class="chip" data-st="SIN" onclick="setStatusFiltro('SIN')">⏳ Sin auditar <span class="n" id="chip-sin">—</span></div>
+</div>
+
+<div class="main">
+
+  <div id="loading" class="loading">Cargando datos del Sheet...</div>
+
+  <div id="content" style="display:none">
+
+    <div class="kpi-grid">
+      <div class="kpi-card primary"><div class="kpi-label">Total registros</div><div class="kpi-val" id="kpi-tot">—</div></div>
+      <div class="kpi-card apr"><div class="kpi-label">Aprobados</div><div class="kpi-val" id="kpi-apr">—</div></div>
+      <div class="kpi-card rech"><div class="kpi-label">Rechazados</div><div class="kpi-val" id="kpi-rech">—</div></div>
+      <div class="kpi-card avc"><div class="kpi-label">En avance</div><div class="kpi-val" id="kpi-avc">—</div></div>
+      <div class="kpi-card sin"><div class="kpi-label">Sin auditar</div><div class="kpi-val" id="kpi-sin">—</div></div>
+      <div class="kpi-card enc"><div class="kpi-label">Con nota Encajados</div><div class="kpi-val" id="kpi-enc">—</div></div>
+    </div>
+
+    <div class="panels-row">
+      <div class="panel">
+        <div class="panel-title">Distribución por Status</div>
+        <canvas id="chartDonut"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Registros por Grupo</div>
+        <canvas id="chartGrupo"></canvas>
+      </div>
+    </div>
+
+    <div class="table-panel">
+      <div class="table-header">
+        <div class="table-title">Detalle de registros</div>
+        <div class="table-count" id="table-count">—</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Grupo</th><th>Estilo</th><th>PO</th><th>Color</th>
+              <th>Cantidad</th><th>% Pedido</th><th>Estatus Encajado</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SHEET_ID   = '1BT-8jGWpT6ENHgsnCBX_Ybb9rbHfUr9kearKNsvu8E4';
+const SHEET_NAME = 'Avances Auditoria SEM-025';
+
+const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, ESTATUS_ENC:8, STATUS:9 };
+
+let DATOS = [];
+let filtroStatus = '';
+
+const FONT = "'Barlow', sans-serif";
+Chart.defaults.font.family = FONT;
+Chart.defaults.color = '#5A6B67';
+
+async function cargarDatos() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+    const res  = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
+    const rows = json.table.rows;
+
+    DATOS = rows.map(row => {
+      const c = row.c;
+      const val = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
+      return {
+        fecha:      val(COL.FECHA),
+        semana:     val(COL.SEMANA),
+        grupo:      val(COL.GRUPO),
+        estilo:     val(COL.ESTILO),
+        po:         val(COL.PO),
+        color:      val(COL.COLOR),
+        cantidad:   val(COL.CANT),
+        porcentaje: (c[COL.PORC] && c[COL.PORC].v !== null) ? (parseFloat(c[COL.PORC].v) * 100).toFixed(2) + '%' : '',
+        estatusEnc: val(COL.ESTATUS_ENC),
+        status:     val(COL.STATUS).toUpperCase(),
+      };
+    }).filter(r => r.grupo || r.estilo);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    poblarFiltros();
+    render();
+
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '⚠ Error cargando datos. Verifica que el Sheets sea público (lector).';
+    console.error(e);
+  }
+}
+
+function poblarFiltros() {
+  const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
+  fillSelect('f-grupo', unique(DATOS.map(r=>r.grupo)));
+  fillSelect('f-estilo', unique(DATOS.map(r=>r.estilo)));
+  fillSelect('f-po', unique(DATOS.map(r=>r.po)));
+  fillSelect('f-color', unique(DATOS.map(r=>r.color)));
+
+  ['f-grupo','f-estilo','f-po','f-color'].forEach(id => {
+    document.getElementById(id).addEventListener('change', render);
+  });
+  document.getElementById('f-search').addEventListener('input', render);
+}
+
+function fillSelect(id, values) {
+  const sel = document.getElementById(id);
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+function setStatusFiltro(st) {
+  filtroStatus = st;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.chip[data-st="${st}"]`).classList.add('active');
+  render();
+}
+
+function resetFiltros() {
+  document.getElementById('f-grupo').value = '';
+  document.getElementById('f-estilo').value = '';
+  document.getElementById('f-po').value = '';
+  document.getElementById('f-color').value = '';
+  document.getElementById('f-search').value = '';
+  setStatusFiltro('');
+}
+
+function getFiltrados() {
+  const fg = document.getElementById('f-grupo').value;
+  const fe = document.getElementById('f-estilo').value;
+  const fp = document.getElementById('f-po').value;
+  const fc = document.getElementById('f-color').value;
+  const fs = document.getElementById('f-search').value.toLowerCase();
+
+  return DATOS.filter(r => {
+    if(fg && r.grupo !== fg) return false;
+    if(fe && r.estilo !== fe) return false;
+    if(fp && r.po !== fp) return false;
+    if(fc && r.color !== fc) return false;
+    if(fs && !(r.grupo+r.estilo+r.po+r.color).toLowerCase().includes(fs)) return false;
+    if(filtroStatus === 'SIN') { if(r.status) return false; }
+    else if(filtroStatus) { if(r.status !== filtroStatus) return false; }
+    return true;
+  });
+}
+
+let chartDonut, chartGrupo;
+
+function render() {
+  const filtrados = getFiltrados();
+
+  // Chips (siempre sobre el total sin filtro de status, pero respetando otros filtros)
+  const baseFiltro = DATOS.filter(r => {
+    const fg = document.getElementById('f-grupo').value;
+    const fe = document.getElementById('f-estilo').value;
+    const fp = document.getElementById('f-po').value;
+    const fc = document.getElementById('f-color').value;
+    const fs = document.getElementById('f-search').value.toLowerCase();
+    if(fg && r.grupo !== fg) return false;
+    if(fe && r.estilo !== fe) return false;
+    if(fp && r.po !== fp) return false;
+    if(fc && r.color !== fc) return false;
+    if(fs && !(r.grupo+r.estilo+r.po+r.color).toLowerCase().includes(fs)) return false;
+    return true;
+  });
+
+  const apr  = baseFiltro.filter(r => r.status === 'APROBADO').length;
+  const rech = baseFiltro.filter(r => r.status === 'RECHAZADO').length;
+  const avc  = baseFiltro.filter(r => r.status === 'AVANCE').length;
+  const sin  = baseFiltro.filter(r => !r.status).length;
+  const enc  = baseFiltro.filter(r => r.estatusEnc).length;
+
+  document.getElementById('chip-tot').textContent  = baseFiltro.length;
+  document.getElementById('chip-apr').textContent  = apr;
+  document.getElementById('chip-rech').textContent = rech;
+  document.getElementById('chip-avc').textContent  = avc;
+  document.getElementById('chip-sin').textContent  = sin;
+
+  document.getElementById('kpi-tot').textContent  = baseFiltro.length;
+  document.getElementById('kpi-apr').textContent  = apr;
+  document.getElementById('kpi-rech').textContent = rech;
+  document.getElementById('kpi-avc').textContent  = avc;
+  document.getElementById('kpi-sin').textContent  = sin;
+  document.getElementById('kpi-enc').textContent  = enc;
+
+  renderDonut(apr, rech, avc, sin);
+  renderGrupoChart(filtrados);
+  renderTabla(filtrados);
+}
+
+function renderDonut(apr, rech, avc, sin) {
+  const ctx = document.getElementById('chartDonut');
+  const data = [apr, rech, avc, sin];
+  if(chartDonut) { chartDonut.data.datasets[0].data = data; chartDonut.update(); return; }
+  chartDonut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Aprobado','Rechazado','Avance','Sin auditar'],
+      datasets: [{ data, backgroundColor: ['#10B981','#DC2626','#F59E0B','#9CA3AF'], borderWidth:0 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'bottom', labels:{ padding:14, usePointStyle:true } } },
+      cutout:'62%'
+    }
+  });
+}
+
+function renderGrupoChart(filtrados) {
+  const counts = {};
+  filtrados.forEach(r => { counts[r.grupo] = (counts[r.grupo]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ctx = document.getElementById('chartGrupo');
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>e[1]);
+  if(chartGrupo) { chartGrupo.data.labels = labels; chartGrupo.data.datasets[0].data = data; chartGrupo.update(); return; }
+  chartGrupo = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor:'#0E3B36', borderRadius:4 }] },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, grid:{ color:'#F1F6F4' } }, x:{ grid:{ display:false } } }
+    }
+  });
+}
+
+function renderTabla(filtrados) {
+  document.getElementById('table-count').textContent = filtrados.length + ' registro(s)';
+  const badgeMap = { APROBADO:'badge-apr', RECHAZADO:'badge-rech', AVANCE:'badge-avc' };
+
+  if(!filtrados.length) {
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="8"><div class="empty">Sin registros que coincidan con los filtros</div></td></tr>';
+    return;
+  }
+
+  document.getElementById('tbody').innerHTML = filtrados.map(r => {
+    const statusHtml = r.status
+      ? `<span class="badge ${badgeMap[r.status]||'badge-sin'}">${r.status}</span>`
+      : `<span class="badge badge-sin">SIN AUDITAR</span>`;
+    const encHtml = r.estatusEnc ? `<span class="enc-note">${r.estatusEnc}</span>` : '—';
+    return `<tr>
+      <td>${r.grupo}</td><td>${r.estilo}</td><td>${r.po}</td><td>${r.color}</td>
+      <td>${r.cantidad}</td><td>${r.porcentaje}</td>
+      <td>${encHtml}</td><td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
