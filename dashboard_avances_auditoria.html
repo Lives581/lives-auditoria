@@ -136,6 +136,10 @@ tbody tr:hover{ background:#F6FBF9; }
 
 <div class="filters-bar">
   <div class="filter-group">
+    <label>Cliente</label>
+    <select id="f-cliente"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
     <label>Grupo</label>
     <select id="f-grupo"><option value="">Todos</option></select>
   </div>
@@ -241,6 +245,7 @@ async function cargarDatos() {
         fecha:      val(COL.FECHA),
         semana:     val(COL.SEMANA),
         grupo:      val(COL.GRUPO),
+        cliente:    val(COL.GRUPO).split('-')[0].trim(),
         estilo:     val(COL.ESTILO),
         po:         val(COL.PO),
         color:      val(COL.COLOR),
@@ -265,12 +270,13 @@ async function cargarDatos() {
 
 function poblarFiltros() {
   const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
+  fillSelect('f-cliente', unique(DATOS.map(r=>r.cliente)));
   fillSelect('f-grupo', unique(DATOS.map(r=>r.grupo)));
   fillSelect('f-estilo', unique(DATOS.map(r=>r.estilo)));
   fillSelect('f-po', unique(DATOS.map(r=>r.po)));
   fillSelect('f-color', unique(DATOS.map(r=>r.color)));
 
-  ['f-grupo','f-estilo','f-po','f-color'].forEach(id => {
+  ['f-cliente','f-grupo','f-estilo','f-po','f-color'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   document.getElementById('f-search').addEventListener('input', render);
@@ -293,6 +299,7 @@ function setStatusFiltro(st) {
 }
 
 function resetFiltros() {
+  document.getElementById('f-cliente').value = '';
   document.getElementById('f-grupo').value = '';
   document.getElementById('f-estilo').value = '';
   document.getElementById('f-po').value = '';
@@ -302,6 +309,7 @@ function resetFiltros() {
 }
 
 function getFiltrados() {
+  const fcl = document.getElementById('f-cliente').value;
   const fg = document.getElementById('f-grupo').value;
   const fe = document.getElementById('f-estilo').value;
   const fp = document.getElementById('f-po').value;
@@ -309,6 +317,7 @@ function getFiltrados() {
   const fs = document.getElementById('f-search').value.toLowerCase();
 
   return DATOS.filter(r => {
+    if(fcl && r.cliente !== fcl) return false;
     if(fg && r.grupo !== fg) return false;
     if(fe && r.estilo !== fe) return false;
     if(fp && r.po !== fp) return false;
@@ -327,11 +336,13 @@ function render() {
 
   // Chips (siempre sobre el total sin filtro de status, pero respetando otros filtros)
   const baseFiltro = DATOS.filter(r => {
+    const fcl = document.getElementById('f-cliente').value;
     const fg = document.getElementById('f-grupo').value;
     const fe = document.getElementById('f-estilo').value;
     const fp = document.getElementById('f-po').value;
     const fc = document.getElementById('f-color').value;
     const fs = document.getElementById('f-search').value.toLowerCase();
+    if(fcl && r.cliente !== fcl) return false;
     if(fg && r.grupo !== fg) return false;
     if(fe && r.estilo !== fe) return false;
     if(fp && r.po !== fp) return false;
