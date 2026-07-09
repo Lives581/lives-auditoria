@@ -133,6 +133,15 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 
 .btn-guardar{ width:100%; padding:17px; background:var(--green); color:#fff; border:none; border-radius:12px; font-family:'Barlow',sans-serif; font-size:17px; font-weight:700; cursor:pointer; transition:background 0.2s; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
 .btn-guardar:hover{ background:#21867a; }
+.card-title-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.card-title-row .card-title{ margin-bottom:0; }
+.btn-limpiar{
+  background:transparent; border:1.5px solid var(--border); color:var(--muted);
+  border-radius:8px; padding:6px 14px; font-family:'Barlow',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; transition:all 0.15s;
+  text-transform:uppercase; letter-spacing:0.5px;
+}
+.btn-limpiar:hover{ border-color:var(--red); color:var(--red); }
 .btn-guardar:disabled{ background:var(--border); cursor:not-allowed; color:var(--muted); }
 
 .loading{ text-align:center; padding:40px; color:var(--muted); font-size:15px; }
@@ -167,7 +176,10 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 <div class="main">
 
   <div class="card">
-    <div class="card-title">Buscar registro</div>
+    <div class="card-title-row">
+      <div class="card-title">Buscar registro</div>
+      <button class="btn-limpiar" onclick="limpiarFormulario()">✕ Limpiar</button>
+    </div>
     <div id="loading-search" class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span><br><br>Cargando datos...</div>
     <div class="field-grid" id="field-grid" style="display:none">
       <div class="field"><label>Grupo</label><div class="ac-wrap"><input id="inp-grupo" class="ac-input" type="text" placeholder="Escribe para buscar..." autocomplete="off" autocorrect="off" autocapitalize="off"><div class="ac-list" id="list-grupo"></div></div></div>
