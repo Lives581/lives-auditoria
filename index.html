@@ -243,6 +243,25 @@ let st = {grupo:null,estilo:null,po:null,color:null};
 let registro = null, statusSel = null;
 let opts = {grupos:[],estilos:[],pos:[],colores:[]};
 
+function fmtFecha(raw) {
+  if (!raw) return '';
+  const m = raw.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)$/);
+  if (!m) return raw;
+  const [, y, mo, d, h, mi] = m;
+  const dd = String(d).padStart(2,'0');
+  const mm = String(parseInt(mo)+1).padStart(2,'0');
+  let out = `${dd}/${mm}/${y}`;
+  if (h !== undefined) out += ` ${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
+  return out;
+}
+
+function latestAudit(d) {
+  if (d.aud3_porc !== null && d.aud3_porc !== undefined) return {n:3, porc:d.aud3_porc, cant:d.aud3_cant, fecha:d.aud3_fecha};
+  if (d.aud2_porc !== null && d.aud2_porc !== undefined) return {n:2, porc:d.aud2_porc, cant:d.aud2_cant, fecha:d.aud2_fecha};
+  if (d.aud1_porc !== null && d.aud1_porc !== undefined) return {n:1, porc:d.aud1_porc, cant:d.aud1_cant, fecha:d.aud1_fecha};
+  return null;
+}
+
 async function cargarDatos() {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
@@ -254,9 +273,10 @@ async function cargarDatos() {
     DATOS = rows.map((row, i) => {
       const c = row.c;
       const val = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
+      const fval = (idx) => fmtFecha(val(idx));
       return {
         rowIndex:   i + 2,
-        fecha:      val(COL.FECHA),
+        fecha:      fval(COL.FECHA),
         semana:     val(COL.SEMANA),
         grupo:      val(COL.GRUPO),
         estilo:     val(COL.ESTILO),
@@ -269,15 +289,15 @@ async function cargarDatos() {
         aud1_porc:  (c[COL.P1RA] && c[COL.P1RA].v !== null) ? parseFloat(c[COL.P1RA].v) : null,
         aud1_cant:  val(COL.C1RA),
         aud1_stat:  val(COL.S1RA),
-        aud1_fecha: val(COL.F1RA),
+        aud1_fecha: fval(COL.F1RA),
         aud2_porc:  (c[COL.P2DA] && c[COL.P2DA].v !== null) ? parseFloat(c[COL.P2DA].v) : null,
         aud2_cant:  val(COL.C2DA),
         aud2_stat:  val(COL.S2DA),
-        aud2_fecha: val(COL.F2DA),
+        aud2_fecha: fval(COL.F2DA),
         aud3_porc:  (c[COL.P3RA] && c[COL.P3RA].v !== null) ? parseFloat(c[COL.P3RA].v) : null,
         aud3_cant:  val(COL.C3RA),
         aud3_stat:  val(COL.S3RA),
-        aud3_fecha: val(COL.F3RA),
+        aud3_fecha: fval(COL.F3RA),
       };
     }).filter(r => r.grupo || r.estilo);
 
@@ -366,7 +386,8 @@ function cargarRegistro() {
   document.getElementById('registro-card').classList.add('visible');
   // Prellenar cantidad auditada si ya tiene
   const cantInp = document.getElementById('inp-cant-auditada');
-  cantInp.value = registro.cantAud || '';
+  const ultimaAud = latestAudit(registro);
+  cantInp.value = ultimaAud ? (ultimaAud.cant || '') : '';
   cantInp.max = parseFloat(registro.cantidad) || 999999;
   document.getElementById('cant-hint').textContent = `Máximo: ${registro.cantidad} prendas`;
   actualizarVersus();
@@ -445,6 +466,17 @@ function actualizarVersus() {
 }
 
 function renderRegistro(d) {
+  const ultima = latestAudit(d);
+  const cantTot = parseFloat(d.cantidad) || 0;
+  let cantAudTxt = '—', porcAudTxt = '—';
+  if (ultima) {
+    const cantAud = parseFloat(ultima.cant) || 0;
+    cantAudTxt = cantAud > 0 ? cantAud + ' prendas' : '—';
+    if (cantAud > 0 && cantTot > 0) {
+      const porcReal = (cantAud / cantTot) * (ultima.porc * 100);
+      porcAudTxt = porcReal.toFixed(2) + '%';
+    }
+  }
   const campos = [
     {label:'Fecha',val:d.fecha},{label:'Semana',val:d.semana},
     {label:'Grupo',val:d.grupo},{label:'Estilo',val:d.estilo},
@@ -452,7 +484,7 @@ function renderRegistro(d) {
     {label:'Cantidad',val:d.cantidad},{label:'% Pedido',val:d.porcentaje},
     {label:'Estatus Encajado',val:d.estatusEnc||'—'},
     {label:'Status actual',val:d.status||'—'},
-    {label:'Cant. Auditada',val:d.cantAud||'—'},{label:'% Auditado',val:d.porcAud||'—'},
+    {label:'Cant. Auditada (últ.)',val:cantAudTxt},{label:'% Auditado (últ.)',val:porcAudTxt},
   ];
   document.getElementById('datos-grid').innerHTML = campos.map(c =>
     `<div class="dato"><span class="dato-label">${c.label}</span><span class="dato-valor">${c.val}</span></div>`
