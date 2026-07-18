@@ -274,55 +274,84 @@ function latestAudit(d) {
   return null;
 }
 
-async function cargarDatos() {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
-    const res  = await fetch(url);
-    const text = await res.text();
-    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
-    const rows = json.table.rows;
+// FIX (filtros): antes esto leía por gviz/tq. gviz/tq refleja el "Crear un
+// filtro" (embudo) de Encajados para CUALQUIERA que consulte esa URL, no
+// solo para quien lo aplicó — así que si alguien tenía un filtro activo,
+// el formulario cargaba solo esas filas visibles, no todo el Sheet. Ahora
+// se lee vía el propio Apps Script (acción "datos"), que usa SpreadsheetApp
+// y por lo tanto siempre ve los valores reales, sin que le afecte ningún
+// filtro visual.
+function cargarDatos() {
+  return new Promise((resolve) => {
+    const callbackName = 'cbDatos_' + Date.now();
+    const script = document.createElement('script');
+    let resuelto = false;
 
-    DATOS = rows.map((row, i) => {
-      const c = row.c;
-      const val = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
-      const fval = (idx) => fmtFecha(val(idx));
-      return {
-        rowIndex:   i + 2,
-        fecha:      fval(COL.FECHA),
-        semana:     val(COL.SEMANA),
-        grupo:      val(COL.GRUPO),
-        estilo:     val(COL.ESTILO),
-        po:         val(COL.PO),
-        color:      val(COL.COLOR),
-        cantidad:   val(COL.CANT),
-        porcentaje: (c[COL.PORC] && c[COL.PORC].v !== null) ? (parseFloat(c[COL.PORC].v) * 100).toFixed(2) + '%' : '',
-        estatusEnc: val(COL.ESTATUS_ENC),
-        status:     val(COL.STATUS),
-        aud1_porc:  (c[COL.P1RA] && c[COL.P1RA].v !== null) ? parseFloat(c[COL.P1RA].v) : null,
-        aud1_cant:  val(COL.C1RA),
-        aud1_stat:  val(COL.S1RA),
-        aud1_fecha: fval(COL.F1RA),
-        aud2_porc:  (c[COL.P2DA] && c[COL.P2DA].v !== null) ? parseFloat(c[COL.P2DA].v) : null,
-        aud2_cant:  val(COL.C2DA),
-        aud2_stat:  val(COL.S2DA),
-        aud2_fecha: fval(COL.F2DA),
-        aud3_porc:  (c[COL.P3RA] && c[COL.P3RA].v !== null) ? parseFloat(c[COL.P3RA].v) : null,
-        aud3_cant:  val(COL.C3RA),
-        aud3_stat:  val(COL.S3RA),
-        aud3_fecha: fval(COL.F3RA),
-      };
-    }).filter(r => r.grupo || r.estilo);
+    const limpiar = () => { try { document.body.removeChild(script); } catch(e) {} };
 
-    document.getElementById('loading-search').style.display = 'none';
-    document.getElementById('field-grid').style.display = '';
+    window[callbackName] = function(res) {
+      resuelto = true;
+      delete window[callbackName];
+      limpiar();
+      if (!res || !res.ok) {
+        document.getElementById('loading-search').innerHTML = '⚠ Error cargando datos: ' + ((res && res.error) || 'respuesta inválida');
+        resolve();
+        return;
+      }
+      DATOS = res.rows.map(r => ({
+        rowIndex:   r.rowIndex,
+        fecha:      String(r.fecha || ''),
+        semana:     String(r.semana || ''),
+        grupo:      String(r.grupo || '').trim(),
+        estilo:     String(r.estilo || '').trim(),
+        po:         String(r.po || '').trim(),
+        color:      String(r.color || '').trim(),
+        cantidad:   String(r.cantidad || ''),
+        porcentaje: (r.porcentaje !== null && r.porcentaje !== undefined && r.porcentaje !== '') ? (parseFloat(r.porcentaje) * 100).toFixed(2) + '%' : '',
+        estatusEnc: String(r.estatusEnc || ''),
+        status:     String(r.status || ''),
+        aud1_porc:  (r.aud1_porc !== null && r.aud1_porc !== undefined && r.aud1_porc !== '') ? parseFloat(r.aud1_porc) : null,
+        aud1_cant:  String(r.aud1_cant || ''),
+        aud1_stat:  String(r.aud1_stat || ''),
+        aud1_fecha: String(r.aud1_fecha || ''),
+        aud2_porc:  (r.aud2_porc !== null && r.aud2_porc !== undefined && r.aud2_porc !== '') ? parseFloat(r.aud2_porc) : null,
+        aud2_cant:  String(r.aud2_cant || ''),
+        aud2_stat:  String(r.aud2_stat || ''),
+        aud2_fecha: String(r.aud2_fecha || ''),
+        aud3_porc:  (r.aud3_porc !== null && r.aud3_porc !== undefined && r.aud3_porc !== '') ? parseFloat(r.aud3_porc) : null,
+        aud3_cant:  String(r.aud3_cant || ''),
+        aud3_stat:  String(r.aud3_stat || ''),
+        aud3_fecha: String(r.aud3_fecha || ''),
+      })).filter(r => r.grupo || r.estilo);
 
-    actualizarResumen();
-    opts.grupos = [...new Set(DATOS.map(r=>r.grupo).filter(Boolean))].sort();
+      document.getElementById('loading-search').style.display = 'none';
+      document.getElementById('field-grid').style.display = '';
 
-  } catch(e) {
-    document.getElementById('loading-search').innerHTML = '⚠ Error cargando datos. Verifica que el Sheets sea público.';
-    console.error(e);
-  }
+      actualizarResumen();
+      opts.grupos = [...new Set(DATOS.map(r=>r.grupo).filter(Boolean))].sort();
+      resolve();
+    };
+
+    script.src = `${APPS_SCRIPT_URL}?accion=datos&callback=${callbackName}`;
+    script.onerror = function() {
+      if (resuelto) return;
+      resuelto = true;
+      delete window[callbackName];
+      limpiar();
+      document.getElementById('loading-search').innerHTML = '⚠ Error de conexión cargando datos.';
+      resolve();
+    };
+    document.body.appendChild(script);
+
+    setTimeout(() => {
+      if (resuelto) return;
+      resuelto = true;
+      delete window[callbackName];
+      limpiar();
+      document.getElementById('loading-search').innerHTML = '⚠ Tiempo de espera agotado cargando datos. Recarga la página.';
+      resolve();
+    }, 15000);
+  });
 }
 
 function setupAC(inpId, listId, getOpts, onSel) {
