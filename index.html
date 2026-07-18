@@ -151,7 +151,7 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 @keyframes pulse{ 0%,80%,100%{ opacity:0.3; transform:scale(0.8); } 40%{ opacity:1; transform:scale(1.2); } }
 
 .toast{ position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(120px); background:var(--green); color:#fff; padding:15px 28px; border-radius:12px; font-weight:700; font-size:15px; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index:999; white-space:nowrap; box-shadow:0 4px 24px rgba(0,0,0,0.5); }
-.toast.error{ background:var(--red); }
+.toast.error{ background:var(--red); white-space:normal; max-width:90vw; text-align:center; }
 .toast.show{ transform:translateX(-50%) translateY(0); }
 
 .spinner{ display:inline-block; width:14px; height:14px; border:2px solid #ffffff44; border-top-color:#fff; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:7px; }
@@ -528,34 +528,72 @@ function guardar() {
   btn.innerHTML = '<span class="spinner"></span>Guardando...';
 
   const callbackName = 'cb_' + Date.now();
-  let params = `?rowIndex=${registro.rowIndex}&status=${statusSel}&callback=${callbackName}`;
+
+  // FIX: ahora se manda también grupo/estilo/po/color para que el Apps
+  // Script pueda verificar (y autocorregir si hace falta) que el rowIndex
+  // realmente corresponda a este registro. Antes, si el rowIndex quedaba
+  // desactualizado por una inserción/borrado de filas mientras la página
+  // estaba abierta, el guardado caía en una fila equivocada sin avisar.
+  let params = `?rowIndex=${registro.rowIndex}&status=${statusSel}&callback=${callbackName}`
+    + `&grupo=${encodeURIComponent(st.grupo || '')}`
+    + `&estilo=${encodeURIComponent(st.estilo || '')}`
+    + `&po=${encodeURIComponent(st.po || '')}`
+    + `&color=${encodeURIComponent(st.color || '')}`;
   if(cantAud > 0) params += `&cantAud=${cantAud}`;
 
   const url = APPS_SCRIPT_URL + params;
 
+  let respondido = false;
+
   window[callbackName] = function(res) {
+    respondido = true;
     delete window[callbackName];
     try { document.body.removeChild(script); } catch(e) {}
     btn.innerHTML = 'Guardar';
+    btn.disabled = false;
+
+    // FIX: antes esto se ignoraba y siempre se mostraba "guardado" a los
+    // 2 segundos, incluso si el servidor devolvía un error. Ahora sí se
+    // revisa la respuesta real.
+    if (res && res.ok) {
+      const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
+      if(idx >= 0) {
+        DATOS[idx].status = statusSel;
+      }
+      actualizarResumen();
+      showToast('✓ Guardado correctamente');
+      limpiarFormulario();
+    } else {
+      showToast((res && res.error) ? res.error : 'No se pudo guardar. Verifica el registro e inténtalo de nuevo.', true);
+      btn.disabled = false;
+    }
   };
 
   const script = document.createElement('script');
   script.src = url;
-  script.onerror = function() {};
-  document.body.appendChild(script);
-
-  setTimeout(function() {
+  script.onerror = function() {
+    if (respondido) return;
+    respondido = true;
+    delete window[callbackName];
     try { document.body.removeChild(script); } catch(e) {}
     btn.innerHTML = 'Guardar';
-    const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
-    if(idx >= 0) {
-      DATOS[idx].status  = statusSel;
-      DATOS[idx].cantAud = cantAud > 0 ? String(cantAud) : DATOS[idx].cantAud;
-    }
-    actualizarResumen();
-    showToast('\u2713 Guardado correctamente');
-    limpiarFormulario();
-  }, 2000);
+    btn.disabled = false;
+    showToast('Error de conexión al guardar. Verifica tu internet e inténtalo de nuevo.', true);
+  };
+  document.body.appendChild(script);
+
+  // FIX: este timeout ya NO asume éxito. Solo actúa como red de seguridad
+  // si nunca llegó respuesta del servidor (por ejemplo, JSONP bloqueado),
+  // y en ese caso avisa del problema en vez de fingir que se guardó.
+  setTimeout(function() {
+    if (respondido) return;
+    respondido = true;
+    delete window[callbackName];
+    try { document.body.removeChild(script); } catch(e) {}
+    btn.innerHTML = 'Guardar';
+    btn.disabled = false;
+    showToast('No se recibió confirmación del servidor. Verifica e inténtalo de nuevo antes de continuar.', true);
+  }, 8000);
 }
 
 function actualizarResumen() {
@@ -603,7 +641,7 @@ function showToast(msg, error=false) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast'+(error?' error':'');
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
+  setTimeout(() => t.classList.remove('show'), error ? 6000 : 3500);
 }
 
 cargarDatos();
