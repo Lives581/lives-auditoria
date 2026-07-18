@@ -118,6 +118,7 @@ tbody tr:hover{background:var(--warm-light);}
       <div class="fgroup"><span class="flbl">PO</span><select id="f-po"><option value="">Todos</option></select></div>
       <div class="fgroup"><span class="flbl">Color</span><select id="f-color"><option value="">Todos</option></select></div>
       <div class="fgroup"><span class="flbl">Semana</span><select id="f-semana"><option value="">Todas</option></select></div>
+      <div class="fgroup"><span class="flbl">Mes</span><select id="f-mes"><option value="">Todos</option></select></div>
       <div class="fgroup fsearch"><span class="flbl">Buscar</span><input type="text" id="f-search" placeholder="Grupo, estilo, PO, color..."></div>
       <div class="fgroup"><span class="flbl">Estatus Cliente desde</span><input type="date" id="f-cli-desde"></div>
       <div class="fgroup"><span class="flbl">hasta</span><input type="date" id="f-cli-hasta"></div>
@@ -189,6 +190,19 @@ tbody tr:hover{background:var(--warm-light);}
         <div class="fgroup"><span class="flbl">Cliente</span><select id="ft-cliente"><option value="">Todos</option></select></div>
         <div class="fgroup"><span class="flbl">Grupo</span><select id="ft-grupo"><option value="">Todos</option></select></div>
         <div class="fgroup"><span class="flbl">Estilo</span><select id="ft-estilo"><option value="">Todos</option></select></div>
+        <div class="fgroup"><span class="flbl">Estatus actual</span><select id="ft-estado">
+          <option value="">Todos</option>
+          <option value="APROBADO">Aprobado</option>
+          <option value="RECHAZADO">Rechazado</option>
+          <option value="AVANCE">Avance</option>
+          <option value="SIN">Sin auditar</option>
+        </select></div>
+        <div class="fgroup"><span class="flbl">Estatus Cliente</span><select id="ft-clistatus">
+          <option value="">Todos</option>
+          <option value="APROBADO_CLIENTE">Aprobado por Cliente</option>
+          <option value="RECHAZADO_CLIENTE">Rechazado por Cliente</option>
+          <option value="PENDIENTE">Pendiente</option>
+        </select></div>
         <div class="fgroup fsearch"><span class="flbl">Buscar</span><input type="text" id="ft-search" placeholder="Grupo, estilo, PO, color..."></div>
       </div>
       <div class="tcount" id="table-count">—</div>
@@ -226,6 +240,16 @@ const CLIENTES_MAP = {
 function clienteDeGrupo(grupo) {
   const p = (grupo || '').split('-')[0].trim().toUpperCase();
   return CLIENTES_MAP[p] || p;
+}
+
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function mesDeFecha(fechaStr) {
+  if (!fechaStr) return {key:'', label:''};
+  const m = fechaStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) return {key:'', label:''};
+  const mes = parseInt(m[2]) - 1;
+  const anio = m[3];
+  return {key: anio + '-' + String(mes+1).padStart(2,'0'), label: MESES_ES[mes] + ' ' + anio};
 }
 let DATOS = [];
 let filtroStatus = '';
@@ -273,8 +297,11 @@ function cargarDatos() {
 
     DATOS = res.rows.map(r => {
       const grupo = val(r.grupo);
+      const fechaStr = val(r.fecha);
+      const mesInfo = mesDeFecha(fechaStr);
       return {
-        fecha: val(r.fecha), semana: val(r.semana),
+        fecha: fechaStr, semana: val(r.semana),
+        mesKey: mesInfo.key, mesLabel: mesInfo.label,
         grupo, cliente: clienteDeGrupo(grupo),
         estilo: val(r.estilo), po: val(r.po), color: val(r.color),
         cantidad: val(r.cantidad),
@@ -324,7 +351,16 @@ function poblarFiltros() {
   fillSelect('f-color', unique(DATOS.map(r=>r.color)));
   fillSelect('f-semana', unique(DATOS.map(r=>r.semana)).sort((a,b)=>parseFloat(a)-parseFloat(b)), s => 'Sem ' + s);
 
-  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana'].forEach(id => {
+  const mesesUnicos = [...new Map(DATOS.filter(r=>r.mesKey).map(r=>[r.mesKey, r.mesLabel])).entries()]
+    .sort((a,b) => a[0].localeCompare(b[0]));
+  const selMes = document.getElementById('f-mes');
+  mesesUnicos.forEach(([key, label]) => {
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = label;
+    selMes.appendChild(opt);
+  });
+
+  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana','f-mes'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   document.getElementById('f-search').addEventListener('input', render);
@@ -335,11 +371,14 @@ function poblarFiltros() {
   document.getElementById('tendencia-rango').addEventListener('change', render);
 
   // Filtros propios de la tabla de detalle, para no tener que scrollear
-  // hasta arriba cada vez que se quiere buscar algo puntual.
+  // hasta arriba cada vez que se quiere buscar algo puntual. Estatus
+  // actual/Cliente aquí solo ofrecen los valores de auditoría (Aprobado/
+  // Rechazado/Avance/Sin auditar y Aprobado-Rechazado-Pendiente de Cliente)
+  // — nunca el texto libre que llena Encajados, que varía caso a caso.
   fillSelect('ft-cliente', unique(DATOS.map(r=>r.cliente)));
   fillSelect('ft-grupo', unique(DATOS.map(r=>r.grupo)));
   fillSelect('ft-estilo', unique(DATOS.map(r=>r.estilo)));
-  ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => {
+  ['ft-cliente','ft-grupo','ft-estilo','ft-estado','ft-clistatus'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   document.getElementById('ft-search').addEventListener('input', render);
@@ -355,12 +394,12 @@ function fillSelect(id, values, labelFn) {
 }
 
 function limpiarFiltros() {
-  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana'].forEach(id => document.getElementById(id).value = '');
+  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana','f-mes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-search').value = '';
   document.getElementById('f-cli-desde').value = '';
   document.getElementById('f-cli-hasta').value = '';
   document.getElementById('tendencia-rango').value = 'todas';
-  ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => document.getElementById(id).value = '');
+  ['ft-cliente','ft-grupo','ft-estilo','ft-estado','ft-clistatus'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ft-search').value = '';
   filtroStatus = ''; filtroCliente = '';
   render();
@@ -382,6 +421,7 @@ function getFiltrados() {
   const fp = document.getElementById('f-po').value;
   const fco = document.getElementById('f-color').value;
   const fsem = document.getElementById('f-semana').value;
+  const fmes = document.getElementById('f-mes').value;
   const fs = document.getElementById('f-search').value.toLowerCase().trim();
   const fcliDesde = document.getElementById('f-cli-desde').value; // yyyy-mm-dd o ''
   const fcliHasta = document.getElementById('f-cli-hasta').value;
@@ -393,6 +433,7 @@ function getFiltrados() {
     if (fp && r.po !== fp) return false;
     if (fco && r.color !== fco) return false;
     if (fsem && r.semana !== fsem) return false;
+    if (fmes && r.mesKey !== fmes) return false;
     if (fs) {
       const hay = `${r.grupo} ${r.estilo} ${r.po} ${r.color}`.toLowerCase();
       if (!hay.includes(fs)) return false;
@@ -676,6 +717,8 @@ function renderTabla(filtradosGlobal) {
   const ftc = document.getElementById('ft-cliente').value;
   const ftg = document.getElementById('ft-grupo').value;
   const fte = document.getElementById('ft-estilo').value;
+  const ftEstado = document.getElementById('ft-estado').value;
+  const ftCliStatus = document.getElementById('ft-clistatus').value;
   const fts = document.getElementById('ft-search').value.toLowerCase().trim();
 
   const filtrados = filtradosGlobal.filter(r => {
@@ -685,6 +728,19 @@ function renderTabla(filtradosGlobal) {
     if (fts) {
       const hay = `${r.grupo} ${r.estilo} ${r.po} ${r.color}`.toLowerCase();
       if (!hay.includes(fts)) return false;
+    }
+    const est = estatusActual(r);
+    if (ftEstado) {
+      if (ftEstado === 'SIN') { if (est.esCalidad) return false; }
+      else if (!est.esCalidad || est.label !== ftEstado) return false;
+    }
+    if (ftCliStatus) {
+      const esAprobadoInterno = est.esCalidad && est.label === 'APROBADO';
+      if (ftCliStatus === 'PENDIENTE') {
+        if (!esAprobadoInterno || r.statusCliente) return false;
+      } else {
+        if (r.statusCliente !== ftCliStatus) return false;
+      }
     }
     return true;
   });
