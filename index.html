@@ -91,7 +91,15 @@ body{ font-family:'Barlow',sans-serif; background:var(--bg); color:var(--text); 
 .audits-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 @media(max-width:480px){ .audits-grid{ grid-template-columns:1fr; } }
 .audit-card{ background:#0f172a; border:1.5px solid var(--border); border-radius:10px; padding:12px; opacity:0.35; }
-.audit-card.filled{ opacity:1; }
+.audit-card.filled{ opacity:1; cursor:pointer; transition:border-color 0.15s; }
+.audit-card.filled:hover{ border-color:var(--green); }
+.audit-card.editing{ cursor:default; }
+.audit-edit-hint{ font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
+.audit-edit-row{ display:flex; gap:6px; margin-top:6px; align-items:center; }
+.audit-edit-row input{ width:70px; background:var(--bg); border:1.5px solid var(--green); border-radius:6px; color:var(--text); font-family:'Barlow',sans-serif; font-size:13px; padding:5px 7px; text-align:center; }
+.audit-edit-row button{ border:none; border-radius:6px; font-family:'Barlow',sans-serif; font-size:11px; font-weight:700; padding:6px 8px; cursor:pointer; }
+.audit-edit-row .btn-ok{ background:var(--green); color:#fff; }
+.audit-edit-row .btn-cancel{ background:transparent; border:1px solid var(--border); color:var(--muted); }
 .audit-card.filled.st-aprobado{ border-color:#2a9d8f66; }
 .audit-card.filled.st-rechazado{ border-color:#e6394666; }
 .audit-card.filled.st-avance{ border-color:#e9c46a66; }
@@ -466,6 +474,7 @@ setupAC('inp-color','list-color', () => opts.colores, val => { st.color = val; c
 function cargarRegistro() {
   registro = DATOS.find(r => r.grupo===st.grupo && r.estilo===st.estilo && r.po===st.po && r.color===st.color) || null;
   if(!registro){ showToast('Registro no encontrado', true); return; }
+  auditEditando = null;
   renderRegistro(registro);
   document.getElementById('registro-card').classList.add('visible');
   // Prellenar cantidad auditada si ya tiene
@@ -480,14 +489,16 @@ function cargarRegistro() {
   if(STATUS_OPTS.includes((registro.status||'').toUpperCase())) selStatus(registro.status.toUpperCase());
 }
 
+let auditEditando = null; // 1, 2, 3 o null
+
 function renderAudits(d) {
   const box = document.getElementById('audits-box');
   const grid = document.getElementById('audits-grid');
   const cantTot = parseFloat(d.cantidad) || 0;
   const audits = [
-    {num:'1ra Auditoría', porc:d.aud1_porc, cant:d.aud1_cant, stat:d.aud1_stat, fecha:d.aud1_fecha},
-    {num:'2da Auditoría', porc:d.aud2_porc, cant:d.aud2_cant, stat:d.aud2_stat, fecha:d.aud2_fecha},
-    {num:'3ra Auditoría', porc:d.aud3_porc, cant:d.aud3_cant, stat:d.aud3_stat, fecha:d.aud3_fecha},
+    {n:1, num:'1ra Auditoría', porc:d.aud1_porc, cant:d.aud1_cant, stat:d.aud1_stat, fecha:d.aud1_fecha},
+    {n:2, num:'2da Auditoría', porc:d.aud2_porc, cant:d.aud2_cant, stat:d.aud2_stat, fecha:d.aud2_fecha},
+    {n:3, num:'3ra Auditoría', porc:d.aud3_porc, cant:d.aud3_cant, stat:d.aud3_stat, fecha:d.aud3_fecha},
   ];
   const hayAlguna = audits.some(a => a.porc !== null && a.porc !== undefined);
   if(!hayAlguna) { box.classList.remove('visible'); return; }
@@ -505,14 +516,93 @@ function renderAudits(d) {
       const porcReal = (cantAud / cantTot) * (a.porc*100);
       auditadoTxt = porcReal.toFixed(2) + '% (' + cantAud + ' prendas)';
     }
-    return `<div class="audit-card filled ${statClass}">
+
+    if (auditEditando === a.n) {
+      return `<div class="audit-card filled editing ${statClass}">
+        <div class="audit-num">${a.num}</div>
+        <div class="audit-porc">${porcPedidoTxt}</div>
+        <div class="audit-edit-row">
+          <input type="number" min="0" id="edit-cant-${a.n}" value="${cantAud || ''}" placeholder="Cantidad">
+        </div>
+        <div class="audit-edit-row">
+          <button class="btn-ok" onclick="event.stopPropagation(); guardarCorreccionCantidad(${a.n})">Guardar</button>
+          <button class="btn-cancel" onclick="event.stopPropagation(); auditEditando=null; renderAudits(registro);">Cancelar</button>
+        </div>
+        <div class="audit-status ${statClass}">${a.stat||'—'}</div>
+      </div>`;
+    }
+
+    return `<div class="audit-card filled ${statClass}" onclick="auditEditando=${a.n}; renderAudits(registro);">
       <div class="audit-num">${a.num}</div>
       <div class="audit-porc">${porcPedidoTxt}</div>
       <div class="audit-cant">Auditado: ${auditadoTxt}</div>
       <div class="audit-status ${statClass}">${a.stat||'—'}</div>
       <div class="audit-fecha">${a.fecha||''}</div>
+      <div class="audit-edit-hint">✎ Toca para corregir cantidad</div>
     </div>`;
   }).join('');
+}
+
+// NUEVO: corregir la Cantidad Auditada de una auditoría pasada específica
+// (1RA/2DA/3RA), directo desde su tarjeta. No cambia status ni fecha, solo
+// la cantidad — para cuando alguien nota que quedó mal (por ejemplo, del
+// relleno automático con la Cantidad Pedido) y la corrige con el dato real.
+function guardarCorreccionCantidad(auditNum) {
+  if (!registro) return;
+  const input = document.getElementById('edit-cant-' + auditNum);
+  const nuevaCant = parseFloat(input.value) || 0;
+  if (nuevaCant <= 0) {
+    showToast('La cantidad debe ser mayor a 0', true);
+    return;
+  }
+
+  const callbackName = 'cbCorr_' + Date.now();
+  const params = `?accion=corregir&rowIndex=${registro.rowIndex}&auditoria=${auditNum}&cantidad=${nuevaCant}&callback=${callbackName}`
+    + `&grupo=${encodeURIComponent(st.grupo || '')}`
+    + `&estilo=${encodeURIComponent(st.estilo || '')}`
+    + `&po=${encodeURIComponent(st.po || '')}`
+    + `&color=${encodeURIComponent(st.color || '')}`;
+  const url = APPS_SCRIPT_URL + params;
+
+  let respondido = false;
+
+  window[callbackName] = function(res) {
+    respondido = true;
+    delete window[callbackName];
+    try { document.body.removeChild(script); } catch(e) {}
+
+    if (res && res.ok) {
+      const campoCant = 'aud' + auditNum + '_cant';
+      registro[campoCant] = String(nuevaCant);
+      const idx = DATOS.findIndex(r => r.rowIndex === registro.rowIndex);
+      if (idx >= 0) DATOS[idx][campoCant] = String(nuevaCant);
+      auditEditando = null;
+      renderAudits(registro);
+      renderRegistro(registro);
+      showToast('✓ Cantidad corregida');
+    } else {
+      showToast((res && res.error) ? res.error : 'No se pudo corregir la cantidad.', true);
+    }
+  };
+
+  const script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    if (respondido) return;
+    respondido = true;
+    delete window[callbackName];
+    try { document.body.removeChild(script); } catch(e) {}
+    showToast('Error de conexión al corregir la cantidad.', true);
+  };
+  document.body.appendChild(script);
+
+  setTimeout(function() {
+    if (respondido) return;
+    respondido = true;
+    delete window[callbackName];
+    try { document.body.removeChild(script); } catch(e) {}
+    showToast('No se recibió confirmación del servidor. Inténtalo de nuevo.', true);
+  }, 8000);
 }
 
 // Actualizar versus en tiempo real al cambiar cantidad auditada
@@ -838,7 +928,7 @@ function limpiarFormulario() {
   document.getElementById('registro-card').classList.remove('visible');
   document.getElementById('cliente-section').style.display = 'none';
   st = {cliente: st.cliente, grupo:null, estilo:null, po:null, color:null};
-  registro = null; statusSel = null;
+  registro = null; statusSel = null; auditEditando = null;
   document.getElementById('btn-guardar').disabled = true;
   document.querySelectorAll('.btn-s').forEach(b => b.classList.remove('on'));
   window.scrollTo({top:0, behavior:'smooth'});
