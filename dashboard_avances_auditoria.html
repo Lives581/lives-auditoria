@@ -77,6 +77,10 @@ th{padding:9px 10px;font-weight:700;text-align:left;white-space:nowrap;}
 td{padding:8px 10px;color:#333;border-bottom:1px solid var(--warm-light);}
 tbody tr:hover{background:var(--warm-light);}
 .tcount{font-size:11.5px;color:var(--stone);margin-bottom:8px;}
+.tablepager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--warm-light);}
+.tablepager button{background:#fff;border:1.5px solid var(--sage);color:var(--sage);font-family:inherit;font-size:12.5px;font-weight:700;border-radius:6px;padding:6px 14px;cursor:pointer;}
+.tablepager button:disabled{border-color:var(--warm);color:var(--stone);cursor:not-allowed;opacity:.5;}
+.tablepager .pinfo{font-size:12px;color:var(--stone);font-weight:600;}
 .badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;}
 .badge-apr{background:#E7F7F0;color:var(--sage-dark);}
 .badge-rech{background:#FBE9E9;color:var(--rose);}
@@ -133,9 +137,7 @@ tbody tr:hover{background:var(--warm-light);}
       <div class="cwrap" style="height:260px"><canvas id="chartTendencia"></canvas></div>
     </div>
 
-    <div class="sectitle">Estatus Cliente <span class="stag">nuevo</span></div>
-    <div class="chipsrow" id="chips-cliente"></div>
-    <div class="kpis" id="kpis-cliente"></div>
+    <div class="sectitle">Estatus Cliente <span class="stag">columna en tabla — filtros y KPIs cuando el flujo esté en uso</span></div>
 
     <div class="sectitle">Desgloses</div>
     <div class="grid2">
@@ -153,8 +155,6 @@ tbody tr:hover{background:var(--warm-light);}
         <div class="cwrap" style="height:220px"><canvas id="chartRanking"></canvas></div>
       </div>
     </div>
-
-    <div class="icards" id="icards-cliente"></div>
 
     <div class="sectitle">Análisis por Cliente <span class="stag">gerencial</span></div>
     <div class="panel">
@@ -176,19 +176,26 @@ tbody tr:hover{background:var(--warm-light);}
 
     <div class="sectitle">Detalle de registros</div>
     <div class="panel">
+      <div class="filterbar" style="position:static;margin-bottom:12px;">
+        <div class="fgroup"><span class="flbl">Cliente</span><select id="ft-cliente"><option value="">Todos</option></select></div>
+        <div class="fgroup"><span class="flbl">Grupo</span><select id="ft-grupo"><option value="">Todos</option></select></div>
+        <div class="fgroup"><span class="flbl">Estilo</span><select id="ft-estilo"><option value="">Todos</option></select></div>
+        <div class="fgroup fsearch"><span class="flbl">Buscar</span><input type="text" id="ft-search" placeholder="Grupo, estilo, PO, color..."></div>
+      </div>
       <div class="tcount" id="table-count">—</div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Grupo</th><th>Estilo</th><th>PO</th><th>Color</th>
-              <th>Cantidad</th><th>% Pedido</th><th>Estatus Encajado</th>
+              <th>Cantidad</th><th>% Pedido</th>
               <th>Estatus actual</th><th>Estatus Cliente</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
+      <div class="tablepager" id="table-pager"></div>
     </div>
 
   </div>
@@ -215,6 +222,8 @@ function clienteDeGrupo(grupo) {
 let DATOS = [];
 let filtroStatus = '';
 let filtroCliente = '';
+let tablaPage = 0;
+const TABLA_PAGE_SIZE = 30;
 
 const FONT = "Calibri, Arial, sans-serif";
 Chart.defaults.font.family = FONT;
@@ -312,6 +321,16 @@ function poblarFiltros() {
     document.getElementById(id).addEventListener('change', render);
   });
   document.getElementById('f-search').addEventListener('input', render);
+
+  // Filtros propios de la tabla de detalle, para no tener que scrollear
+  // hasta arriba cada vez que se quiere buscar algo puntual.
+  fillSelect('ft-cliente', unique(DATOS.map(r=>r.cliente)));
+  fillSelect('ft-grupo', unique(DATOS.map(r=>r.grupo)));
+  fillSelect('ft-estilo', unique(DATOS.map(r=>r.estilo)));
+  ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => { tablaPage = 0; render(); });
+  });
+  document.getElementById('ft-search').addEventListener('input', () => { tablaPage = 0; render(); });
 }
 
 function fillSelect(id, values) {
@@ -326,7 +345,9 @@ function fillSelect(id, values) {
 function limpiarFiltros() {
   ['f-cliente','f-grupo','f-estilo','f-po','f-color'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-search').value = '';
-  filtroStatus = ''; filtroCliente = '';
+  ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ft-search').value = '';
+  filtroStatus = ''; filtroCliente = ''; tablaPage = 0;
   render();
 }
 
@@ -386,9 +407,6 @@ function render() {
   const filtrados = getFiltrados();
   renderChipsInternos();
   renderKpisInternos(filtrados);
-  renderChipsCliente(filtrados);
-  renderKpisCliente(filtrados);
-  renderIcardsCliente(filtrados);
   renderDonut(filtrados);
   renderRanking(filtrados);
   renderTendencia(filtrados);
@@ -452,79 +470,12 @@ function renderKpisInternos(filtrados) {
     {v: filtrados.length, l:'Total registros', s:'', cls:''},
     {v: auditados, l:'Auditados (cerrados)', s:'Aprobado + Rechazado', cls:''},
     {v: tasaApr.toFixed(1)+'%', l:'% Aprobación', s:'sobre auditados', cls: tasaApr < 80 ? 'warn':''},
-    {v: tasaRech.toFixed(1)+'%', l:'% Rechazo', s:'sobre auditados', cls: tasaRech > 15 ? 'alert':''},
+    {v: tasaRech.toFixed(1)+'%', l:'% Rechazo', s:'sobre auditados', cls: 'alert'},
     {v: avc, l:'En avance', s:'', cls:''},
     {v: sin, l:'Sin auditar', s:'', cls:''},
   ];
   document.getElementById('kpis-internos').innerHTML = kpis.map((k,i) =>
     `<div class="kpi ${i===0?'primary':''} ${k.cls}"><div class="v">${k.v}</div><div class="l">${k.l}</div>${k.s?`<div class="s">${k.s}</div>`:''}</div>`
-  ).join('');
-}
-
-function renderChipsCliente(filtradosGlobal) {
-  const base = getFiltrados_sinCliente();
-  let ac=0, rc=0, pend=0;
-  base.forEach(r => {
-    const est = estatusActual(r);
-    const esAprobadoInterno = est.esCalidad && est.label === 'APROBADO';
-    if (r.statusCliente === 'APROBADO_CLIENTE') ac++;
-    else if (r.statusCliente === 'RECHAZADO_CLIENTE') rc++;
-    else if (esAprobadoInterno) pend++;
-  });
-  const chips = [
-    {st:'', label:'Todos', n: base.length, cls:''},
-    {st:'APROBADO_CLIENTE', label:'Aprobado por Cliente', n: ac, cls:''},
-    {st:'RECHAZADO_CLIENTE', label:'Rechazado por Cliente', n: rc, cls:'re'},
-    {st:'PENDIENTE', label:'Pendiente de Cliente', n: pend, cls:'av'},
-  ];
-  document.getElementById('chips-cliente').innerHTML = chips.map(c =>
-    `<div class="chip ${filtroCliente===c.st?'active '+c.cls:''}" onclick="setClienteFiltro('${c.st}')">${c.label}<span class="n">${c.n}</span></div>`
-  ).join('');
-}
-
-function renderKpisCliente(filtrados) {
-  const conDecisionCliente = filtrados.filter(r => r.statusCliente === 'APROBADO_CLIENTE' || r.statusCliente === 'RECHAZADO_CLIENTE');
-  const acCliente = conDecisionCliente.filter(r => r.statusCliente === 'APROBADO_CLIENTE').length;
-  const rcCliente = conDecisionCliente.length - acCliente;
-  const tasaCoincidencia = conDecisionCliente.length > 0 ? (acCliente / conDecisionCliente.length * 100) : null;
-
-  const pendientes = filtrados.filter(r => {
-    const est = estatusActual(r);
-    return est.esCalidad && est.label === 'APROBADO' && !r.statusCliente;
-  }).length;
-
-  const kpis = [
-    {v: conDecisionCliente.length, l:'Auditados por Cliente', s:''},
-    {v: tasaCoincidencia !== null ? tasaCoincidencia.toFixed(1)+'%' : '—', l:'% Coincidencia con Calidad', s:'Aprobado por Cliente / Auditado por Cliente', cls: tasaCoincidencia !== null && tasaCoincidencia < 85 ? 'alert' : ''},
-    {v: pendientes, l:'Pendientes de Cliente', s:'ya aprobados por Calidad', cls: pendientes > 0 ? 'warn' : ''},
-  ];
-  document.getElementById('kpis-cliente').innerHTML = kpis.map(k =>
-    `<div class="kpi ${k.cls||''}"><div class="v">${k.v}</div><div class="l">${k.l}</div>${k.s?`<div class="s">${k.s}</div>`:''}</div>`
-  ).join('');
-}
-
-function renderIcardsCliente(filtrados) {
-  // Top 3 registros aprobados por Calidad con más días esperando auditoría de cliente
-  const hoy = new Date();
-  const pendientes = filtrados.filter(r => {
-    const est = estatusActual(r);
-    return est.esCalidad && est.label === 'APROBADO' && !r.statusCliente;
-  }).map(r => {
-    const fecha = parseFechaLocal(r.aud3_fecha) || parseFechaLocal(r.aud2_fecha) || parseFechaLocal(r.aud1_fecha);
-    const dias = fecha ? Math.floor((hoy - fecha) / 86400000) : null;
-    return {...r, dias};
-  }).filter(r => r.dias !== null).sort((a,b) => b.dias - a.dias).slice(0,3);
-
-  if (!pendientes.length) {
-    document.getElementById('icards-cliente').innerHTML = '';
-    return;
-  }
-  document.getElementById('icards-cliente').innerHTML = pendientes.map((r,i) =>
-    `<div class="icard ${r.dias > 5 ? 'bad' : (r.dias > 2 ? 'warn' : '')}">
-      <div class="il">Esperando auditoría cliente</div>
-      <div class="iv">${r.dias} días</div>
-      <div class="is">${r.grupo} · ${r.estilo} · ${r.color}</div>
-    </div>`
   ).join('');
 }
 
@@ -585,6 +536,24 @@ function renderTendencia(filtrados) {
   const semanas = Object.keys(porSemana).filter(s => s !== '?').sort((a,b) => parseFloat(a)-parseFloat(b));
   const data = semanas.map(s => (porSemana[s].apr / porSemana[s].tot * 100));
 
+  // Plugin propio para mostrar el % encima de cada punto — más legible que
+  // solo dejarlo al tooltip, y no requiere una librería externa.
+  const valueLabelsPlugin = {
+    id: 'valueLabels',
+    afterDatasetsDraw(chart) {
+      const {ctx} = chart;
+      const meta = chart.getDatasetMeta(0);
+      meta.data.forEach((point, i) => {
+        ctx.save();
+        ctx.fillStyle = '#0B815E';
+        ctx.font = 'bold 12px Calibri, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(data[i].toFixed(0) + '%', point.x, point.y - 12);
+        ctx.restore();
+      });
+    }
+  };
+
   const ctx = document.getElementById('chartTendencia').getContext('2d');
   if (chartTendencia) chartTendencia.destroy();
   chartTendencia = new Chart(ctx, {
@@ -593,17 +562,31 @@ function renderTendencia(filtrados) {
       labels: semanas.map(s => 'Sem ' + s),
       datasets: [{
         label: '% Aprobación', data: data,
-        borderColor: '#0F7A5A', backgroundColor: 'rgba(15,122,90,0.08)',
-        fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#0F7A5A'
+        borderColor: '#0F7A5A', backgroundColor: 'transparent',
+        borderWidth: 2.5, fill: false, tension: 0.25,
+        pointRadius: 5, pointBackgroundColor: '#0F7A5A', pointBorderColor: '#fff', pointBorderWidth: 2
       }]
     },
     options: {
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => c.formattedValue + '%' } } },
+      layout: { padding: { top: 20 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => c.formattedValue + '% aprobación',
+            afterLabel: (c) => {
+              const sem = semanas[c.dataIndex];
+              return `${porSemana[sem].apr} de ${porSemana[sem].tot} auditorías cerradas`;
+            }
+          }
+        }
+      },
       scales: {
-        y: { min: 0, max: 100, ticks: { callback: (v) => v + '%' }, grid: { color: '#F1F6F4' } },
+        y: { min: 0, max: 100, ticks: { callback: (v) => v + '%', stepSize: 20 }, grid: { color: '#F1F6F4' } },
         x: { grid: { display: false } }
       }
-    }
+    },
+    plugins: [valueLabelsPlugin]
   });
 }
 
@@ -643,16 +626,38 @@ function renderTablaClientes(filtrados) {
   }).join('');
 }
 
-function renderTabla(filtrados) {
+function renderTabla(filtradosGlobal) {
+  // Filtros propios de la tabla (además de los globales de arriba)
+  const ftc = document.getElementById('ft-cliente').value;
+  const ftg = document.getElementById('ft-grupo').value;
+  const fte = document.getElementById('ft-estilo').value;
+  const fts = document.getElementById('ft-search').value.toLowerCase().trim();
+
+  const filtrados = filtradosGlobal.filter(r => {
+    if (ftc && r.cliente !== ftc) return false;
+    if (ftg && r.grupo !== ftg) return false;
+    if (fte && r.estilo !== fte) return false;
+    if (fts) {
+      const hay = `${r.grupo} ${r.estilo} ${r.po} ${r.color}`.toLowerCase();
+      if (!hay.includes(fts)) return false;
+    }
+    return true;
+  });
+
   document.getElementById('table-count').textContent = `${filtrados.length} registro(s)`;
   const badgeMap = { APROBADO:'badge-apr', RECHAZADO:'badge-rech', AVANCE:'badge-avc' };
 
-  document.getElementById('tbody').innerHTML = filtrados.map(r => {
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / TABLA_PAGE_SIZE));
+  if (tablaPage >= totalPaginas) tablaPage = totalPaginas - 1;
+  if (tablaPage < 0) tablaPage = 0;
+  const inicio = tablaPage * TABLA_PAGE_SIZE;
+  const pagina = filtrados.slice(inicio, inicio + TABLA_PAGE_SIZE);
+
+  document.getElementById('tbody').innerHTML = pagina.map(r => {
     const est = estatusActual(r);
     const estHtml = est.esCalidad
       ? `<span class="badge ${badgeMap[est.label]||'badge-sin'}">${est.label}</span>`
       : `<span class="badge badge-sin">${est.label}</span>`;
-    const encHtml = r.estatusEnc ? `<span class="enc-note">${r.estatusEnc}</span>` : '—';
 
     let cliHtml = '<span class="badge badge-cli-pend">—</span>';
     if (r.statusCliente === 'APROBADO_CLIENTE') cliHtml = '<span class="badge badge-cli-apr">Aprobado Cliente</span>';
@@ -662,9 +667,25 @@ function renderTabla(filtrados) {
     return `<tr>
       <td>${r.grupo}</td><td>${r.estilo}</td><td>${r.po}</td><td>${r.color}</td>
       <td>${r.cantidad}</td><td>${r.porcentaje}</td>
-      <td>${encHtml}</td><td>${estHtml}</td><td>${cliHtml}</td>
+      <td>${estHtml}</td><td>${cliHtml}</td>
     </tr>`;
   }).join('');
+
+  const pager = document.getElementById('table-pager');
+  if (totalPaginas <= 1) {
+    pager.innerHTML = '';
+  } else {
+    pager.innerHTML = `
+      <button ${tablaPage===0?'disabled':''} onclick="cambiarPagina(-1)">‹ Anterior</button>
+      <span class="pinfo">Página ${tablaPage+1} de ${totalPaginas}</span>
+      <button ${tablaPage>=totalPaginas-1?'disabled':''} onclick="cambiarPagina(1)">Siguiente ›</button>
+    `;
+  }
+}
+
+function cambiarPagina(delta) {
+  tablaPage += delta;
+  render();
 }
 
 cargarDatos();
