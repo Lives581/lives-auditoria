@@ -220,8 +220,7 @@ tbody tr:hover{ background:#F6FBF9; }
 <script>
 const SHEET_ID   = '1BT-8jGWpT6ENHgsnCBX_Ybb9rbHfUr9kearKNsvu8E4';
 const SHEET_NAME = 'Avances Auditoria SEM-025';
-
-const COL = { FECHA:0, SEMANA:1, GRUPO:2, ESTILO:3, PO:4, COLOR:5, CANT:6, PORC:7, ESTATUS_ENC:8, STATUS:9 };
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-ZCzYEK9Y-N95TVjbWSMer4rxdxWoZCx8l1rhHln36QbywiCR-pIux3tyTIq8SoP3/exec';
 
 let DATOS = [];
 let filtroStatus = '';
@@ -230,29 +229,46 @@ const FONT = "'Barlow', sans-serif";
 Chart.defaults.font.family = FONT;
 Chart.defaults.color = '#5A6B67';
 
-async function cargarDatos() {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
-    const res  = await fetch(url);
-    const text = await res.text();
-    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
-    const rows = json.table.rows;
+// FIX (filtros): antes esto leía por gviz/tq. gviz/tq refleja el "Crear un
+// filtro" (embudo) que Encajados usa para editar cómodo, para CUALQUIERA
+// que consulte esa URL — no solo para quien lo aplicó. Eso hacía que este
+// dashboard mostrara solo las filas que estuvieran visibles según el
+// filtro activo de otra persona en ese momento. Ahora se lee vía el propio
+// Apps Script (acción "datos"), que usa SpreadsheetApp y por lo tanto
+// siempre ve los valores reales de la hoja, sin que le afecte ningún
+// filtro visual de nadie.
+function cargarDatos() {
+  const callbackName = 'cbDatos_' + Date.now();
+  const script = document.createElement('script');
+  let resuelto = false;
+  const limpiar = () => { try { document.body.removeChild(script); } catch(e) {} };
 
-    DATOS = rows.map(row => {
-      const c = row.c;
-      const val = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? String(c[idx].v).trim() : '';
+  window[callbackName] = function(res) {
+    resuelto = true;
+    delete window[callbackName];
+    limpiar();
+
+    if (!res || !res.ok) {
+      document.getElementById('loading').innerHTML = '⚠ Error cargando datos: ' + ((res && res.error) || 'respuesta inválida');
+      return;
+    }
+
+    const val = (v) => (v !== null && v !== undefined) ? String(v).trim() : '';
+
+    DATOS = res.rows.map(r => {
+      const grupo = val(r.grupo);
       return {
-        fecha:      val(COL.FECHA),
-        semana:     val(COL.SEMANA),
-        grupo:      val(COL.GRUPO),
-        cliente:    val(COL.GRUPO).split('-')[0].trim(),
-        estilo:     val(COL.ESTILO),
-        po:         val(COL.PO),
-        color:      val(COL.COLOR),
-        cantidad:   val(COL.CANT),
-        porcentaje: (c[COL.PORC] && c[COL.PORC].v !== null) ? (parseFloat(c[COL.PORC].v) * 100).toFixed(2) + '%' : '',
-        estatusEnc: val(COL.ESTATUS_ENC),
-        status:     val(COL.STATUS).toUpperCase(),
+        fecha:      val(r.fecha),
+        semana:     val(r.semana),
+        grupo:      grupo,
+        cliente:    grupo.split('-')[0].trim(),
+        estilo:     val(r.estilo),
+        po:         val(r.po),
+        color:      val(r.color),
+        cantidad:   val(r.cantidad),
+        porcentaje: (r.porcentaje !== null && r.porcentaje !== undefined && r.porcentaje !== '') ? (parseFloat(r.porcentaje) * 100).toFixed(2) + '%' : '',
+        estatusEnc: val(r.estatusEnc),
+        status:     val(r.status).toUpperCase(),
       };
     }).filter(r => r.grupo || r.estilo);
 
@@ -261,11 +277,25 @@ async function cargarDatos() {
 
     poblarFiltros();
     render();
+  };
 
-  } catch(e) {
-    document.getElementById('loading').innerHTML = '⚠ Error cargando datos. Verifica que el Sheets sea público (lector).';
-    console.error(e);
-  }
+  script.src = `${APPS_SCRIPT_URL}?accion=datos&callback=${callbackName}`;
+  script.onerror = function() {
+    if (resuelto) return;
+    resuelto = true;
+    delete window[callbackName];
+    limpiar();
+    document.getElementById('loading').innerHTML = '⚠ Error de conexión cargando datos.';
+  };
+  document.body.appendChild(script);
+
+  setTimeout(() => {
+    if (resuelto) return;
+    resuelto = true;
+    delete window[callbackName];
+    limpiar();
+    document.getElementById('loading').innerHTML = '⚠ Tiempo de espera agotado cargando datos. Recarga la página.';
+  }, 15000);
 }
 
 function poblarFiltros() {
