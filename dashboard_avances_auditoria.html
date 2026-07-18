@@ -77,10 +77,9 @@ th{padding:9px 10px;font-weight:700;text-align:left;white-space:nowrap;}
 td{padding:8px 10px;color:#333;border-bottom:1px solid var(--warm-light);}
 tbody tr:hover{background:var(--warm-light);}
 .tcount{font-size:11.5px;color:var(--stone);margin-bottom:8px;}
-.tablepager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--warm-light);}
-.tablepager button{background:#fff;border:1.5px solid var(--sage);color:var(--sage);font-family:inherit;font-size:12.5px;font-weight:700;border-radius:6px;padding:6px 14px;cursor:pointer;}
-.tablepager button:disabled{border-color:var(--warm);color:var(--stone);cursor:not-allowed;opacity:.5;}
-.tablepager .pinfo{font-size:12px;color:var(--stone);font-weight:600;}
+.table-scroll{max-height:560px;overflow-y:auto;border:1px solid var(--warm-light);border-radius:6px;}
+.table-scroll table{margin:0;}
+.table-scroll thead th{position:sticky;top:0;z-index:5;}
 .badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;}
 .badge-apr{background:#E7F7F0;color:var(--sage-dark);}
 .badge-rech{background:#FBE9E9;color:var(--rose);}
@@ -118,7 +117,10 @@ tbody tr:hover{background:var(--warm-light);}
       <div class="fgroup"><span class="flbl">Estilo</span><select id="f-estilo"><option value="">Todos</option></select></div>
       <div class="fgroup"><span class="flbl">PO</span><select id="f-po"><option value="">Todos</option></select></div>
       <div class="fgroup"><span class="flbl">Color</span><select id="f-color"><option value="">Todos</option></select></div>
+      <div class="fgroup"><span class="flbl">Semana</span><select id="f-semana"><option value="">Todas</option></select></div>
       <div class="fgroup fsearch"><span class="flbl">Buscar</span><input type="text" id="f-search" placeholder="Grupo, estilo, PO, color..."></div>
+      <div class="fgroup"><span class="flbl">Estatus Cliente desde</span><input type="date" id="f-cli-desde"></div>
+      <div class="fgroup"><span class="flbl">hasta</span><input type="date" id="f-cli-hasta"></div>
       <button class="fclear" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
     </div>
 
@@ -132,7 +134,14 @@ tbody tr:hover{background:var(--warm-light);}
 
     <div class="sectitle">Tendencia por semana <span class="stag">% aprobación</span></div>
     <div class="panel">
-      <div class="pt">Evolución del % de aprobación</div>
+      <div class="pt" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <span>Evolución del % de aprobación</span>
+        <select id="tendencia-rango" style="font-family:inherit;font-size:12.5px;font-weight:600;color:var(--sage);border:1.5px solid var(--sage);border-radius:6px;padding:5px 10px;background:#fff;cursor:pointer;">
+          <option value="todas">Todas las semanas</option>
+          <option value="8">Últimas 8 semanas</option>
+          <option value="12">Últimas 12 semanas</option>
+        </select>
+      </div>
       <div class="ph">Sobre auditorías cerradas (Aprobado + Rechazado) por semana del Sheet</div>
       <div class="cwrap" style="height:260px"><canvas id="chartTendencia"></canvas></div>
     </div>
@@ -183,7 +192,7 @@ tbody tr:hover{background:var(--warm-light);}
         <div class="fgroup fsearch"><span class="flbl">Buscar</span><input type="text" id="ft-search" placeholder="Grupo, estilo, PO, color..."></div>
       </div>
       <div class="tcount" id="table-count">—</div>
-      <div class="table-wrap">
+      <div class="table-wrap table-scroll">
         <table>
           <thead>
             <tr>
@@ -195,7 +204,6 @@ tbody tr:hover{background:var(--warm-light);}
           <tbody id="tbody"></tbody>
         </table>
       </div>
-      <div class="tablepager" id="table-pager"></div>
     </div>
 
   </div>
@@ -222,8 +230,6 @@ function clienteDeGrupo(grupo) {
 let DATOS = [];
 let filtroStatus = '';
 let filtroCliente = '';
-let tablaPage = 0;
-const TABLA_PAGE_SIZE = 30;
 
 const FONT = "Calibri, Arial, sans-serif";
 Chart.defaults.font.family = FONT;
@@ -316,11 +322,17 @@ function poblarFiltros() {
   fillSelect('f-estilo', unique(DATOS.map(r=>r.estilo)));
   fillSelect('f-po', unique(DATOS.map(r=>r.po)));
   fillSelect('f-color', unique(DATOS.map(r=>r.color)));
+  fillSelect('f-semana', unique(DATOS.map(r=>r.semana)).sort((a,b)=>parseFloat(a)-parseFloat(b)), s => 'Sem ' + s);
 
-  ['f-cliente','f-grupo','f-estilo','f-po','f-color'].forEach(id => {
+  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana'].forEach(id => {
     document.getElementById(id).addEventListener('change', render);
   });
   document.getElementById('f-search').addEventListener('input', render);
+  ['f-cli-desde','f-cli-hasta'].forEach(id => {
+    document.getElementById(id).addEventListener('change', render);
+  });
+
+  document.getElementById('tendencia-rango').addEventListener('change', render);
 
   // Filtros propios de la tabla de detalle, para no tener que scrollear
   // hasta arriba cada vez que se quiere buscar algo puntual.
@@ -328,26 +340,29 @@ function poblarFiltros() {
   fillSelect('ft-grupo', unique(DATOS.map(r=>r.grupo)));
   fillSelect('ft-estilo', unique(DATOS.map(r=>r.estilo)));
   ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => {
-    document.getElementById(id).addEventListener('change', () => { tablaPage = 0; render(); });
+    document.getElementById(id).addEventListener('change', render);
   });
-  document.getElementById('ft-search').addEventListener('input', () => { tablaPage = 0; render(); });
+  document.getElementById('ft-search').addEventListener('input', render);
 }
 
-function fillSelect(id, values) {
+function fillSelect(id, values, labelFn) {
   const sel = document.getElementById(id);
   values.forEach(v => {
     const opt = document.createElement('option');
-    opt.value = v; opt.textContent = v;
+    opt.value = v; opt.textContent = labelFn ? labelFn(v) : v;
     sel.appendChild(opt);
   });
 }
 
 function limpiarFiltros() {
-  ['f-cliente','f-grupo','f-estilo','f-po','f-color'].forEach(id => document.getElementById(id).value = '');
+  ['f-cliente','f-grupo','f-estilo','f-po','f-color','f-semana'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-search').value = '';
+  document.getElementById('f-cli-desde').value = '';
+  document.getElementById('f-cli-hasta').value = '';
+  document.getElementById('tendencia-rango').value = 'todas';
   ['ft-cliente','ft-grupo','ft-estilo'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ft-search').value = '';
-  filtroStatus = ''; filtroCliente = ''; tablaPage = 0;
+  filtroStatus = ''; filtroCliente = '';
   render();
 }
 
@@ -366,7 +381,10 @@ function getFiltrados() {
   const fe = document.getElementById('f-estilo').value;
   const fp = document.getElementById('f-po').value;
   const fco = document.getElementById('f-color').value;
+  const fsem = document.getElementById('f-semana').value;
   const fs = document.getElementById('f-search').value.toLowerCase().trim();
+  const fcliDesde = document.getElementById('f-cli-desde').value; // yyyy-mm-dd o ''
+  const fcliHasta = document.getElementById('f-cli-hasta').value;
 
   return DATOS.filter(r => {
     if (fc && r.cliente !== fc) return false;
@@ -374,9 +392,20 @@ function getFiltrados() {
     if (fe && r.estilo !== fe) return false;
     if (fp && r.po !== fp) return false;
     if (fco && r.color !== fco) return false;
+    if (fsem && r.semana !== fsem) return false;
     if (fs) {
       const hay = `${r.grupo} ${r.estilo} ${r.po} ${r.color}`.toLowerCase();
       if (!hay.includes(fs)) return false;
+    }
+    if (fcliDesde || fcliHasta) {
+      // Filtra por la fecha en que se marcó Estatus Cliente. Si el registro
+      // todavía no tiene esa fecha, queda fuera cuando este filtro está activo
+      // (tiene sentido: se está pidiendo específicamente "lo que audito el
+      // cliente en tal rango").
+      const fechaCli = parseFechaLocal(r.fechaCliente);
+      if (!fechaCli) return false;
+      if (fcliDesde && fechaCli < new Date(fcliDesde + 'T00:00:00')) return false;
+      if (fcliHasta && fechaCli > new Date(fcliHasta + 'T23:59:59')) return false;
     }
     const est = estatusActual(r);
     if (filtroStatus) {
@@ -533,7 +562,17 @@ function renderTendencia(filtrados) {
     porSemana[sem].tot++;
     if (est.label === 'APROBADO') porSemana[sem].apr++;
   });
-  const semanas = Object.keys(porSemana).filter(s => s !== '?').sort((a,b) => parseFloat(a)-parseFloat(b));
+  let semanas = Object.keys(porSemana).filter(s => s !== '?').sort((a,b) => parseFloat(a)-parseFloat(b));
+
+  // Selector de rango: mientras hay pocas semanas no hace falta recortar,
+  // pero en cuanto el histórico crece, esto evita que el eje X se vuelva
+  // ilegible por acumular semana tras semana sin límite.
+  const rango = document.getElementById('tendencia-rango').value;
+  if (rango !== 'todas') {
+    const n = parseInt(rango);
+    semanas = semanas.slice(-n);
+  }
+
   const data = semanas.map(s => (porSemana[s].apr / porSemana[s].tot * 100));
 
   // Plugin propio para mostrar el % encima de cada punto — más legible que
@@ -568,6 +607,12 @@ function renderTendencia(filtrados) {
       }]
     },
     options: {
+      // FIX: el espacio vacío feo a la derecha del gráfico era
+      // maintainAspectRatio peleando con la altura fija del contenedor
+      // (.cwrap con height:260px). Con responsive+maintainAspectRatio:false,
+      // el canvas ocupa exactamente el ancho y alto del contenedor.
+      responsive: true,
+      maintainAspectRatio: false,
       layout: { padding: { top: 20 } },
       plugins: {
         legend: { display: false },
@@ -647,13 +692,10 @@ function renderTabla(filtradosGlobal) {
   document.getElementById('table-count').textContent = `${filtrados.length} registro(s)`;
   const badgeMap = { APROBADO:'badge-apr', RECHAZADO:'badge-rech', AVANCE:'badge-avc' };
 
-  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / TABLA_PAGE_SIZE));
-  if (tablaPage >= totalPaginas) tablaPage = totalPaginas - 1;
-  if (tablaPage < 0) tablaPage = 0;
-  const inicio = tablaPage * TABLA_PAGE_SIZE;
-  const pagina = filtrados.slice(inicio, inicio + TABLA_PAGE_SIZE);
-
-  document.getElementById('tbody').innerHTML = pagina.map(r => {
+  // Sin paginación: la tabla vive en un contenedor con scroll interno y
+  // encabezado fijo (.table-scroll), así la página no crece sin control
+  // aunque haya cientos de registros — se navega scrolleando solo esa caja.
+  document.getElementById('tbody').innerHTML = filtrados.map(r => {
     const est = estatusActual(r);
     const estHtml = est.esCalidad
       ? `<span class="badge ${badgeMap[est.label]||'badge-sin'}">${est.label}</span>`
@@ -670,22 +712,6 @@ function renderTabla(filtradosGlobal) {
       <td>${estHtml}</td><td>${cliHtml}</td>
     </tr>`;
   }).join('');
-
-  const pager = document.getElementById('table-pager');
-  if (totalPaginas <= 1) {
-    pager.innerHTML = '';
-  } else {
-    pager.innerHTML = `
-      <button ${tablaPage===0?'disabled':''} onclick="cambiarPagina(-1)">‹ Anterior</button>
-      <span class="pinfo">Página ${tablaPage+1} de ${totalPaginas}</span>
-      <button ${tablaPage>=totalPaginas-1?'disabled':''} onclick="cambiarPagina(1)">Siguiente ›</button>
-    `;
-  }
-}
-
-function cambiarPagina(delta) {
-  tablaPage += delta;
-  render();
 }
 
 cargarDatos();
