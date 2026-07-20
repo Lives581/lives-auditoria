@@ -477,10 +477,15 @@ function cargarRegistro() {
   auditEditando = null;
   renderRegistro(registro);
   document.getElementById('registro-card').classList.add('visible');
-  // Prellenar cantidad auditada si ya tiene
+  // NUEVO: la Cantidad Auditada NUNCA se precompleta con el valor de una
+  // auditoría anterior. Antes se prellenaba con la última cantidad
+  // guardada, y eso generaba un riesgo real: si alguien no se fijaba y
+  // presionaba Guardar de una, quedaba registrada la cantidad de la
+  // auditoría PASADA como si fuera la de hoy. Ahora el campo siempre
+  // arranca vacío (el "0" que se ve es solo el placeholder) y hay que
+  // escribir la cantidad real cada vez que se guarda.
   const cantInp = document.getElementById('inp-cant-auditada');
-  const ultimaAud = latestAudit(registro);
-  cantInp.value = ultimaAud ? (ultimaAud.cant || '') : '';
+  cantInp.value = '';
   cantInp.max = parseFloat(registro.cantidad) || 999999;
   document.getElementById('cant-hint').textContent = `Máximo: ${registro.cantidad} prendas`;
   actualizarVersus();
@@ -737,7 +742,7 @@ function guardar() {
   const cantAud = parseFloat(cantInp.value) || 0;
   const cantTot = parseFloat(registro.cantidad) || 0;
   if(cantAud <= 0) {
-    showToast('La Cantidad Auditada es obligatoria', true);
+    showToast('No se puede guardar: falta poner la Cantidad de prendas auditadas', true);
     return;
   }
   if(cantAud > cantTot && cantTot > 0) {
